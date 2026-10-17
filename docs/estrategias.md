@@ -288,6 +288,8 @@ cuándo llega la primera operación de la vela siguiente. Las dos órdenes stop 
 
 Arriba a la izquierda elegís la estrategia o creás una con **Nueva estrategia…** (plantillas: Cruce de medias, Ruptura
 de rango, Absorción con delta, Reversión a la VWAP o Vacía); al lado se ve «Compilada · N ms» o la cantidad de errores.
+La lista tiene un buscador y arriba la sección **Favoritos**: la estrella de cada estrategia la suma o la saca, sin
+cerrar la lista.
 El editor resalta C# y lista abajo los errores (tocando uno vas a la línea). Botones: **Guardar** (⌘S), **Compilar**
 (⌘B), **Compilar y probar** (compila y corre el backtest), **Referencia** (resumen de la API) y el tacho, que borra el
 archivo y conserva su historial. A la derecha está el panel de Claude: lo que escribe aparece en el editor.

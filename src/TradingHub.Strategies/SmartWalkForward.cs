@@ -31,13 +31,27 @@ public sealed class CpcvPath
 public sealed class ParameterSpace
 {
     private readonly List<(string Name, Type Type, double[] Values)> _dims = new();
+    private readonly Dictionary<int, string[]> _choices = new();
 
     public ParameterSpace(IReadOnlyList<ParameterRange> ranges, Type strategyType)
     {
         var props = Strategy.Parameters(strategyType).ToDictionary(p => p.Name);
-        foreach (var r in ranges.Where(r => props.ContainsKey(r.Name)))
-            _dims.Add((r.Name, props[r.Name].PropertyType, r.Values().ToArray()));
+        foreach (var r in ranges)
+        {
+            if (r.IsPeriod)
+            {
+                // el período de las velas: una dimensión más, cuyos valores son los lugares en la lista (de corto a largo)
+                if (!r.Enabled || r.Choices.Count == 0) continue;
+                _choices[_dims.Count] = r.Choices.ToArray();
+                _dims.Add((r.Name, typeof(string), Enumerable.Range(0, r.Choices.Count).Select(i => (double)i).ToArray()));
+            }
+            else if (props.TryGetValue(r.Name, out var prop))
+                _dims.Add((r.Name, prop.PropertyType, r.Values().ToArray()));
+        }
     }
+
+    /// <summary>Los períodos de las velas que se prueban (vacío si el período no se optimiza).</summary>
+    public IReadOnlyList<string> Periods => _choices.Values.FirstOrDefault() ?? Array.Empty<string>();
 
     /// <summary>Para pruebas: dimensiones con estos tamaños (valores 0, 1, 2…).</summary>
     public ParameterSpace(params int[] sizes)
@@ -53,7 +67,7 @@ public sealed class ParameterSpace
     {
         var d = new Dictionary<string, object?>();
         for (int k = 0; k < _dims.Count; k++)
-            d[_dims[k].Name] = Convert.ChangeType(_dims[k].Values[idx[k]], _dims[k].Type, CultureInfo.InvariantCulture);
+            d[_dims[k].Name] = _choices.TryGetValue(k, out var choices) ? choices[idx[k]] : Convert.ChangeType(_dims[k].Values[idx[k]], _dims[k].Type, CultureInfo.InvariantCulture);
         return d;
     }
 
@@ -167,7 +181,7 @@ internal sealed class ConfigCache
         var s = _factory();
         s.SetParameters(_base);
         s.SetParameters(pars);
-        var settings = _settings.Clone();
+        var settings = Optimizer.SettingsFor(_settings, pars).Clone();
         settings.CloseAtEnd = true;
         var r = new BacktestEngine(s, _data, settings) { ContextHistory = _context }.Run(_ct);
         if (!r.Ok) return new ConfigRun { Index = idx, Parameters = pars, Error = r.Error };

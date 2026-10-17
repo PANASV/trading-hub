@@ -940,13 +940,30 @@ foreach (var page in pages)
             var open1 = tv.OpenInTabAsync(ch, "sim", "SIM-BTC", TradingHub.Data.ChartPeriod.M1, ch.Model?.Settings.Clone());
             while (!open1.IsCompleted) Pump(0.05);
             for (int i = 0; i < 200 && ch.Model!.Data.IsLoadingHistory; i++) Pump(0.1);
+            // el cruce de medias tal como viene de ejemplo: la copia del del usuario puede haber cambiado y no operar en
+            // esta historia corta (solo se escribe en la carpeta de prueba, nunca en la real)
+            var strategiesDir = Path.GetFullPath(TradingHub.App.Services.AppPaths.Strategies);
+            if (strategiesDir != Path.GetFullPath(Path.Combine(TradingHub.Common.Product.Documents, "Estrategias")))
+            {
+                var example = TradingHub.App.Services.StrategyTemplates.All.First(t => t.FileName == "CruceDeMedias");
+                File.WriteAllText(Path.Combine(strategiesDir, "CruceDeMedias.cs"), example.Code("CruceDeMedias").Replace("__NOMBRE__", "Cruce de medias"));
+            }
+
             App.Services.Strategies.Refresh();
             var file = App.Services.Strategies.Files.First(f => f.FileName == "CruceDeMedias");
+            // el gráfico sin las estrategias que trae el espacio de trabajo copiado: se mide solo la de la prueba
+            foreach (var old in ch.Strategies.ToList()) tv.RemoveStrategy(ch, old);
             var add = tv.AddStrategyAsync(ch, file, openSettings: false);
             while (!add.IsCompleted) Pump(0.1);
-            var cs = ch.Strategies[0];
-            for (int i = 0; i < 300 && cs.Overlay.Status is "calculando…" or "esperando la historia…"; i++) Pump(0.1);
-            Pump(2);
+            var cs = ch.Strategies[^1];
+            // si el gráfico carga más historia la estrategia se recalcula: se espera a que termine la última corrida
+            bool Calculating() => cs.Busy || cs.Overlay.Status is "calculando…" or "esperando la historia…";
+            for (int round = 0; round < 3; round++)
+            {
+                for (int i = 0; i < 600 && Calculating(); i++) Pump(0.1);
+                Pump(2);
+                if (!Calculating()) break;
+            }
             Console.WriteLine($"Visual: estado «{cs.Overlay.Status}» {cs.Overlay.Error} · marcas {cs.Overlay.Signals.Count} · líneas {cs.Overlay.Links.Count} · runner={(cs.Runner?.IsRunning == true ? "corriendo" : "no")} en {cs.Runner?.Account.Name}");
             ch.Model!.Viewport.ScrollBars = 0;
             ch.Model.Viewport.BarWidth = 9;
@@ -959,6 +976,16 @@ foreach (var page in pages)
                 ? lt.Windows.OfType<TradingHub.App.Windows.StrategyChartWindow>().FirstOrDefault() : null;
             sw ??= window.OwnedWindows.OfType<TradingHub.App.Windows.StrategyChartWindow>().FirstOrDefault();
             sw?.CaptureRenderedFrame()?.Save(Path.Combine(outDir, "strategy_settings.png"));
+            // y abajo, cómo le fue en la historia del gráfico (resultado real, curva y estadísticas)
+            if (sw?.GetVisualDescendants().OfType<Avalonia.Controls.ScrollViewer>().FirstOrDefault() is { } scroll)
+            {
+                scroll.ScrollToEnd();
+                Pump(0.6);
+                scroll.ScrollToEnd();
+                Pump(0.4);
+                sw.CaptureRenderedFrame()?.Save(Path.Combine(outDir, "strategy_settings_resultados.png"));
+            }
+
             sw?.Close();
 
             // ejecutar con la cuenta simulada

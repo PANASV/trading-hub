@@ -31,7 +31,7 @@ internal sealed partial class StrategiesView : UserControl, IPage
 
     // encabezado
     private readonly TextBlock _strategyName = new() { FontSize = 15, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center };
-    private MenuFlyout _strategyMenu = new() { Placement = PlacementMode.BottomEdgeAlignedLeft };
+    private Flyout _strategyMenu = new() { Placement = PlacementMode.BottomEdgeAlignedLeft };
     private Button _strategyPicker = null!;
     private readonly Avalonia.Controls.Shapes.Ellipse _compileDot = new() { Width = 8, Height = 8 };
     private readonly TextBlock _compileText = new() { FontSize = 12 };
@@ -120,31 +120,126 @@ internal sealed partial class StrategiesView : UserControl, IPage
         if (id == "optimize" || id == "wfo") RefreshRanges();
     }
 
+    /// <summary>
+    /// La lista de estrategias: arriba las favoritas y abajo todas, cada una con su estrella para sumarla o sacarla de
+    /// favoritas (sin cerrar la lista), un buscador y las acciones de siempre.
+    /// </summary>
     private void BuildStrategyMenu()
     {
-        // menú nuevo cada vez: un MenuFlyout ya abierto no muestra ítems agregados después
-        _strategyMenu = new MenuFlyout { Placement = PlacementMode.BottomEdgeAlignedLeft };
+        _strategyMenu = new Flyout { Placement = PlacementMode.BottomEdgeAlignedLeft, Content = StrategyList() };
         if (_strategyPicker != null) _strategyPicker.Flyout = _strategyMenu;
-        foreach (var f in _catalog.Files)
+    }
+
+    private bool IsFavorite(StrategyFile f) => _svc.Settings.FavoriteStrategies.Contains(f.FileName, StringComparer.OrdinalIgnoreCase);
+
+    private void ToggleFavorite(StrategyFile f)
+    {
+        var favs = _svc.Settings.FavoriteStrategies;
+        if (favs.RemoveAll(x => x.Equals(f.FileName, StringComparison.OrdinalIgnoreCase)) == 0) favs.Add(f.FileName);
+        _svc.Settings.Save();
+        _status(IsFavorite(f) ? $"{f.DisplayName} quedó en favoritos" : $"{f.DisplayName} salió de favoritos");
+    }
+
+    private Control StrategyList()
+    {
+        var search = new TextBox { Watermark = "Buscar estrategia…", Margin = new Thickness(0, 0, 0, 8) };
+        var list = new StackPanel { Spacing = 2 };
+
+        void Fill()
         {
-            var file = f;
-            bool ok = f.LastCompile?.Success != false;
-            var item = new MenuItem
+            list.Children.Clear();
+            string q = (search.Text ?? "").Trim();
+            bool Match(StrategyFile f) => q.Length == 0 || f.DisplayName.Contains(q, StringComparison.OrdinalIgnoreCase) || f.FileName.Contains(q, StringComparison.OrdinalIgnoreCase);
+            var files = _catalog.Files.Where(Match).ToList();
+            var favorites = files.Where(IsFavorite).OrderBy(f => f.DisplayName, StringComparer.CurrentCultureIgnoreCase).ToList();
+
+            TextBlock Section(string text)
             {
-                Header = Ui.V(1, Ui.H(8, new TextBlock { Text = f.DisplayName, FontWeight = FontWeight.Medium }, VerdictPill(Lab.ReportStore.VerdictOf(f.FileName))), new TextBlock { Text = Path.GetFileName(f.Path), Classes = { "faint", "small" } }),
-                Icon = Ui.Icon(ReferenceEquals(f, _current) ? MaterialIconKind.Check : ok ? MaterialIconKind.RobotOutline : MaterialIconKind.AlertCircleOutline, 16, ok ? Ui.Text1 : Ui.Down),
-            };
-            item.Click += (_, _) => _ = SelectAsync(file);
-            _strategyMenu.Items.Add(item);
+                var h = Ui.H3(text);
+                h.Margin = new Thickness(6, 4, 0, 4);
+                return h;
+            }
+
+            list.Children.Add(Section("Favoritos"));
+            if (favorites.Count == 0)
+                list.Children.Add(new TextBlock
+                {
+                    Text = q.Length > 0 ? "Ninguna favorita con ese nombre." : "Tocá la estrella de una estrategia para tenerla acá arriba.",
+                    Classes = { "faint", "small" }, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4, 2, 4, 8),
+                });
+            foreach (var f in favorites) list.Children.Add(StrategyRow(f, Fill));
+
+            list.Children.Add(new Border { Height = 1, Background = Ui.Line, Margin = new Thickness(0, 6) });
+            list.Children.Add(Section("Todas las estrategias"));
+            if (files.Count == 0)
+                list.Children.Add(new TextBlock { Text = q.Length > 0 ? "Ninguna estrategia con ese nombre." : "Todavía no hay estrategias.", Classes = { "faint", "small" }, Margin = new Thickness(4, 2) });
+            foreach (var f in files) list.Children.Add(StrategyRow(f, Fill));
         }
 
-        _strategyMenu.Items.Add(new Separator());
-        var create = new MenuItem { Header = "Nueva estrategia…", Icon = Ui.Icon(MaterialIconKind.Plus, 16) };
-        create.Click += (_, _) => _ = NewStrategyAsync();
-        _strategyMenu.Items.Add(create);
-        var folder = new MenuItem { Header = "Abrir carpeta de estrategias", Icon = Ui.Icon(MaterialIconKind.FolderOpenOutline, 16) };
-        folder.Click += (_, _) => Shell.OpenFolder(AppPaths.Strategies);
-        _strategyMenu.Items.Add(folder);
+        search.TextChanged += (_, _) => Fill();
+        Fill();
+
+        Button Action(string text, MaterialIconKind icon, Action run)
+        {
+            var b = Ui.Button(text, icon, () =>
+            {
+                _strategyMenu.Hide();
+                run();
+            }, "ghost");
+            b.HorizontalAlignment = HorizontalAlignment.Stretch;
+            b.HorizontalContentAlignment = HorizontalAlignment.Left;
+            return b;
+        }
+
+        var actions = Ui.V(2,
+            new Border { Height = 1, Background = Ui.Line, Margin = new Thickness(0, 6) },
+            Action("Nueva estrategia…", MaterialIconKind.Plus, () => _ = NewStrategyAsync()),
+            Action("Abrir carpeta de estrategias", MaterialIconKind.FolderOpenOutline, () => Shell.OpenFolder(AppPaths.Strategies)));
+        var root = new DockPanel { Width = 440, Margin = new Thickness(12) };
+        DockPanel.SetDock(search, Dock.Top);
+        DockPanel.SetDock(actions, Dock.Bottom);
+        root.Children.Add(search);
+        root.Children.Add(actions);
+        root.Children.Add(new ScrollViewer { Content = list, MaxHeight = 460 });
+        return root;
+    }
+
+    /// <summary>Una estrategia de la lista: la estrella (favorita o no) y el resto de la fila la abre.</summary>
+    private Control StrategyRow(StrategyFile f, Action refresh)
+    {
+        bool fav = IsFavorite(f), ok = f.LastCompile?.Success != false, current = ReferenceEquals(f, _current);
+        var star = new Button
+        {
+            Content = Ui.Icon(fav ? MaterialIconKind.Star : MaterialIconKind.StarOutline, 18, fav ? Ui.Accent : Ui.Text2),
+            Classes = { "ghost" }, Padding = new Thickness(6), VerticalAlignment = VerticalAlignment.Center,
+        };
+        ToolTip.SetTip(star, fav ? "Sacar de favoritos" : "Agregar a favoritos");
+        star.Click += (_, _) =>
+        {
+            ToggleFavorite(f);
+            refresh();
+        };
+
+        var icon = Ui.Icon(current ? MaterialIconKind.Check : ok ? MaterialIconKind.RobotOutline : MaterialIconKind.AlertCircleOutline, 16, current ? Ui.Accent : ok ? Ui.Text1 : Ui.Down);
+        var info = Ui.V(1,
+            Ui.H(8, new TextBlock { Text = f.DisplayName, FontWeight = current ? FontWeight.SemiBold : FontWeight.Medium }, VerdictPill(Lab.ReportStore.VerdictOf(f.FileName))),
+            new TextBlock { Text = Path.GetFileName(f.Path), Classes = { "faint", "small" } });
+        var open = new Button
+        {
+            Content = Ui.H(10, icon, info), Classes = { "ghost" }, HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Left, Padding = new Thickness(8, 5),
+        };
+        open.Click += (_, _) =>
+        {
+            _strategyMenu.Hide();
+            _ = SelectAsync(f);
+        };
+
+        var row = new DockPanel();
+        DockPanel.SetDock(star, Dock.Left);
+        row.Children.Add(star);
+        row.Children.Add(open);
+        return row;
     }
 
     // ===================================================================== selección y compilación
@@ -356,6 +451,8 @@ internal sealed partial class StrategiesView : UserControl, IPage
                 }
             }
 
+            // el período de las velas va al final, tildado o no, con los períodos que se habían elegido
+            defaults.Add(_state.Ranges.FirstOrDefault(r => r.IsPeriod) ?? ParameterRange.Periods(Array.Empty<string>(), enabled: false));
             _state.Ranges = defaults;
         }
 

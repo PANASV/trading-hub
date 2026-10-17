@@ -21,7 +21,7 @@ internal sealed partial class StrategiesView
     // configuración
     private readonly ComboBox _dataSource = new() { HorizontalAlignment = HorizontalAlignment.Stretch, PlaceholderText = "Sin datos guardados" };
     private readonly TextBlock _dataInfo = new() { Classes = { "faint", "small" }, TextWrapping = TextWrapping.Wrap };
-    private readonly TextBox _period = new() { Text = "M5", Watermark = "M5, H1, Tick500…" };
+    private readonly TextBox _period = new() { Text = "M5", Watermark = "M5, H1, D1, Tick500…" };
     private readonly CalendarDatePicker _from = new() { HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly CalendarDatePicker _to = new() { HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly NumericUpDown _capital = new() { Value = 10_000, Minimum = 1, Increment = 1000, FormatString = "N0" };
@@ -69,7 +69,7 @@ internal sealed partial class StrategiesView
         _dataSource.SelectionChanged += (_, _) => OnDataSourceChanged();
 
         var periods = new WrapPanel { ItemSpacing = 4, LineSpacing = 4 };
-        foreach (var p in new[] { "M1", "M5", "M15", "H1", "Tick500", "Range20" })
+        foreach (var p in new[] { "M1", "M5", "M15", "H1", "H4", "D1", "Tick500", "Range20" })
         {
             var b = new Button { Content = p, Padding = new Thickness(8, 2), MinHeight = 24, FontSize = 11.5 };
             b.Click += (_, _) => _period.Text = p;
@@ -351,7 +351,7 @@ internal sealed partial class StrategiesView
         string period = (_period.Text ?? "M5").Trim();
         if (validate && !ChartPeriod.TryParse(period, out _))
         {
-            _runStatus.Text = "Período inválido (ejemplos: M1, M5, H1, Tick500, Volume1000, Range20).";
+            _runStatus.Text = "Período inválido (ejemplos: M5, H1, D1 o «diario», Tick500, Volume1000, Range20).";
             return null;
         }
 

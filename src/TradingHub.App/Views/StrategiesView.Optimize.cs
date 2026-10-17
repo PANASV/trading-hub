@@ -1,11 +1,13 @@
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Material.Icons;
 using TradingHub.App.Controls;
+using TradingHub.Data;
 using TradingHub.Strategies;
 
 namespace TradingHub.App.Views;
@@ -65,7 +67,7 @@ internal sealed partial class StrategiesView
 
         var config = Ui.Card(Ui.V(14,
             Ui.H(8, Ui.Icon(MaterialIconKind.TuneVertical, 17, Ui.Accent), Ui.H2("Qué probar")),
-            new TextBlock { Text = "Marcá los parámetros a recorrer y su rango. Usa los datos y la ejecución configurados en Backtest.", Classes = { "muted", "small" }, TextWrapping = TextWrapping.Wrap },
+            new TextBlock { Text = "Marcá los parámetros a recorrer y su rango (también el período de las velas). Usa los datos y la ejecución configurados en Backtest.", Classes = { "muted", "small" }, TextWrapping = TextWrapping.Wrap },
             _rangesPanel,
             _comboCount,
             Ui.Divider(),
@@ -145,13 +147,19 @@ internal sealed partial class StrategiesView
         _osDays.Value = _state.OutSampleDays;
         _anchored.IsChecked = _state.Anchored;
         _search.SelectedItem = _search.Items.OfType<ComboBoxItem>().FirstOrDefault(i => Equals(i.Tag, _state.Search)) ?? (_search.Items.Count > 0 ? _search.Items[0] : null);
-        if (_state.Ranges.Count == 0)
-        {
-            _rangesPanel.Children.Add(new TextBlock { Text = "La estrategia no tiene parámetros numéricos. Agregá [Parameter] y [Optimize(mín, máx, paso)] en el código.", Classes = { "muted", "small" }, TextWrapping = TextWrapping.Wrap });
-            UpdateComboCount();
-            return;
-        }
+        var numeric = _state.Ranges.Where(r => !r.IsPeriod).ToList();
+        if (numeric.Count == 0)
+            _rangesPanel.Children.Add(new TextBlock { Text = "La estrategia no tiene parámetros numéricos. Agregá [Parameter] y [Optimize(mín, máx, paso)] en el código (igual podés probar períodos).", Classes = { "muted", "small" }, TextWrapping = TextWrapping.Wrap });
+        else RangeRows(numeric);
 
+        // el período de las velas, como un parámetro más
+        if (_state.Ranges.FirstOrDefault(r => r.IsPeriod) is { } period) _rangesPanel.Children.Add(PeriodRow(period));
+        UpdateComboCount();
+    }
+
+    /// <summary>Las filas de los parámetros numéricos: tildado, mínimo, máximo y paso.</summary>
+    private void RangeRows(IReadOnlyList<ParameterRange> ranges)
+    {
         var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,76,76,66") };
         foreach (var (text, col) in new[] { ("Parámetro", 0), ("Mín.", 1), ("Máx.", 2), ("Paso", 3) })
         {
@@ -161,7 +169,7 @@ internal sealed partial class StrategiesView
         }
 
         _rangesPanel.Children.Add(header);
-        foreach (var r in _state.Ranges)
+        foreach (var r in ranges)
         {
             var range = r;
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,76,76,66") };
@@ -195,9 +203,50 @@ internal sealed partial class StrategiesView
             row.Children.Add(step);
             _rangesPanel.Children.Add(row);
         }
-
-        UpdateComboCount();
     }
+
+    /// <summary>
+    /// El período de las velas como un parámetro más: se tildan los períodos a probar y cada combinación corre en cada uno
+    /// (las velas se arman con los mismos ticks, que se cargan una sola vez).
+    /// </summary>
+    private Control PeriodRow(ParameterRange range)
+    {
+        var check = new CheckBox { Content = "Período de las velas", IsChecked = range.Enabled, FontSize = 12.5 };
+        ToolTip.SetTip(check, "Prueba cada combinación en cada período tildado, como un parámetro más");
+        var chips = new WrapPanel { ItemSpacing = 4, LineSpacing = 4, Margin = new Thickness(26, 4, 0, 0) };
+        var toggles = new List<(ToggleButton Button, string Code)>();
+        foreach (var label in new[] { "M1", "M5", "M15", "M30", "H1", "H4", "D1" })
+        {
+            ChartPeriod.TryParse(label, out var cp);
+            var t = new ToggleButton { Content = label, Padding = new Thickness(8, 2), MinHeight = 24, FontSize = 11.5, IsChecked = range.Choices.Contains(cp.Code) };
+            toggles.Add((t, cp.Code));
+            chips.Children.Add(t);
+        }
+
+        void Changed()
+        {
+            range.Enabled = check.IsChecked == true;
+            range.SetChoices(toggles.Where(x => x.Button.IsChecked == true).Select(x => x.Code));
+            chips.IsEnabled = range.Enabled;
+            UpdateComboCount();
+            SaveState();
+        }
+
+        check.IsCheckedChanged += (_, _) =>
+        {
+            // al tildarlo sin ninguno elegido, arranca con el período del backtest
+            if (check.IsChecked == true && !toggles.Any(x => x.Button.IsChecked == true) && ChartPeriod.TryParse(_period.Text, out var current))
+                foreach (var x in toggles.Where(x => x.Code == current.Code)) x.Button.IsChecked = true;
+            Changed();
+        };
+        foreach (var (t, _) in toggles) t.IsCheckedChanged += (_, _) => Changed();
+        chips.IsEnabled = range.Enabled;
+        var hint = new TextBlock { Text = "Cada combinación se prueba en cada período tildado.", Classes = { "faint", "small" }, Margin = new Thickness(26, 0, 0, 0), TextWrapping = TextWrapping.Wrap };
+        return Ui.V(4, check, chips, hint);
+    }
+
+    /// <summary>El nombre de un parámetro para mostrar (el período de las velas no es de la estrategia).</summary>
+    private static string ParamName(string name) => name == ParameterRange.PeriodName ? "Período" : name;
 
     private void UpdateComboCount()
     {
@@ -259,7 +308,7 @@ internal sealed partial class StrategiesView
                 _runProgress.Value = p;
             });
             var basePars = BaseParameters();
-            var ranges = _state.Ranges.Select(r => new ParameterRange { Name = r.Name, Label = r.Label, Enabled = r.Enabled, Min = r.Min, Max = r.Max, Step = r.Step, IsInteger = r.IsInteger }).ToList();
+            var ranges = _state.Ranges.Select(r => r.Clone()).ToList();
             var metric = _state.Metric;
             int minTrades = _state.MinTrades;
             var res = await Task.Run(() => Optimizer.Optimize(file.Create, basePars, ranges, data, settings, metric, minTrades, progress, ct,
@@ -328,6 +377,8 @@ internal sealed partial class StrategiesView
         s.SetParameters(_state.Parameters);
         s.SetParameters(pars);
         _state.Parameters = s.GetParameters();
+        // si se optimizó el período, también va al backtest
+        if (pars.TryGetValue(ParameterRange.PeriodName, out var period) && period is not null) _period.Text = FormatValue(period);
         SaveState();
         BuildParameterForm();
         _tabs.Select("backtest");

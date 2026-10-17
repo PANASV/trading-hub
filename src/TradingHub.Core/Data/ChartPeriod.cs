@@ -103,16 +103,26 @@ public readonly record struct ChartPeriod(PeriodType Type, decimal Value)
         throw new FormatException($"Período inválido: {code}");
     }
 
+    /// <summary>
+    /// Lee un período escrito a mano: los códigos de siempre (M5, H1, D1, Daily, Tick500, Range20…) sin importar
+    /// mayúsculas, lo que muestra la barra del gráfico (5m, 1h, D, 2D) y nombres en castellano (diario, semanal, mensual).
+    /// </summary>
     public static bool TryParse(string? code, out ChartPeriod period)
     {
         period = M1;
         if (string.IsNullOrWhiteSpace(code)) return false;
-        code = code.Trim();
-        switch (code)
+        code = code.Trim().Replace(" ", "");
+        switch (code.ToLowerInvariant())
         {
-            case "Daily": period = D1; return true;
-            case "Weekly": period = new(PeriodType.Weeks, 1); return true;
-            case "Monthly": period = new(PeriodType.Months, 1); return true;
+            case "daily" or "diario" or "diaria" or "d" or "1d" or "day":
+                period = D1;
+                return true;
+            case "weekly" or "semanal" or "w" or "1w" or "week":
+                period = new(PeriodType.Weeks, 1);
+                return true;
+            case "monthly" or "mensual" or "mo" or "1mo" or "month":
+                period = new(PeriodType.Months, 1);
+                return true;
         }
 
         (string prefix, PeriodType type)[] map =
@@ -124,8 +134,24 @@ public readonly record struct ChartPeriod(PeriodType Type, decimal Value)
         };
         foreach (var (prefix, type) in map)
         {
-            if (code.StartsWith(prefix, StringComparison.Ordinal) &&
+            if (code.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
                 decimal.TryParse(code.AsSpan(prefix.Length), NumberStyles.Number, CultureInfo.InvariantCulture, out var v) && v > 0)
+            {
+                period = new ChartPeriod(type, v);
+                return true;
+            }
+        }
+
+        // como lo muestra la barra del gráfico: el número primero (30s, 5m, 1h, 2D, 3W, 2mo)
+        (string suffix, PeriodType type)[] suffixes =
+        {
+            ("mo", PeriodType.Months), ("s", PeriodType.Seconds), ("m", PeriodType.Minutes), ("h", PeriodType.Hours),
+            ("d", PeriodType.Days), ("w", PeriodType.Weeks),
+        };
+        foreach (var (suffix, type) in suffixes)
+        {
+            if (code.EndsWith(suffix, StringComparison.OrdinalIgnoreCase) &&
+                decimal.TryParse(code.AsSpan(0, code.Length - suffix.Length), NumberStyles.Number, CultureInfo.InvariantCulture, out var v) && v > 0)
             {
                 period = new ChartPeriod(type, v);
                 return true;

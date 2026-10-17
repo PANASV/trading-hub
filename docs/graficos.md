@@ -206,3 +206,13 @@ operar con la cuenta simulada como si fuera en vivo.
 El ícono del robot pone en el gráfico una estrategia de las que tenés en Backtesting (cómo se escriben, en
 [Estrategias](estrategias.md)). Marca dónde entra y sale, sobre la historia y en vivo, y puede quedarse solo como marca
 visual o ejecutar en una cuenta. Se configura o se quita desde la leyenda del gráfico.
+
+Abajo de la configuración, **En la historia del gráfico** muestra cómo le fue en lo que tiene cargado el gráfico:
+
+- **El resultado real, grande.** Se calcula con la comisión y el deslizamiento de ese mercado, los mismos del
+  backtest.
+- **Una mini curva de capital** con su drawdown.
+- **Las estadísticas:** operaciones, % ganadoras, profit factor, drawdown, promedio por operación, ganancia y pérdida
+  media, la mayor ganancia y la mayor pérdida, rachas, Sharpe, Sortino, recuperación, exposición, largos y cortos,
+  comisiones y velas por operación.
+- **Qué comisión y deslizamiento se usaron.**

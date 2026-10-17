@@ -220,12 +220,12 @@ internal sealed partial class StrategiesView
         // parámetros
         var pars = new WrapPanel { ItemSpacing = 8, LineSpacing = 8 };
         foreach (var (k, v) in run.Parameters)
-            pars.Children.Add(new Border { Child = new TextBlock { Text = $"{k} = {FormatValue(v)}", FontSize = 12 }, Classes = { "pill" }, Padding = new Thickness(10, 4) });
+            pars.Children.Add(new Border { Child = new TextBlock { Text = $"{ParamName(k)} = {FormatValue(v)}", FontSize = 12 }, Classes = { "pill" }, Padding = new Thickness(10, 4) });
         _historyDetail.Children.Add(Ui.Card(Ui.V(10, Ui.H3(run.Kind == RunKind.Optimization ? "Mejores parámetros" : "Parámetros"), pars)));
 
         if (run.Optimization is { } opt)
         {
-            var top = opt.Rows.Take(15).Select((r, i) => $"{i + 1,2}. {Money(r.Metrics.NetProfit),12}  PF {r.Metrics.ProfitFactor,5:0.00}  DD {Money(-r.Metrics.MaxDrawdown),11}  {string.Join(", ", r.Parameters.Select(kv => $"{kv.Key}={FormatValue(kv.Value)}"))}");
+            var top = opt.Rows.Take(15).Select((r, i) => $"{i + 1,2}. {Money(r.Metrics.NetProfit),12}  PF {r.Metrics.ProfitFactor,5:0.00}  DD {Money(-r.Metrics.MaxDrawdown),11}  {string.Join(", ", r.Parameters.Select(kv => $"{ParamName(kv.Key)}={FormatValue(kv.Value)}"))}");
             _historyDetail.Children.Add(Ui.Card(Ui.V(8, Ui.H3($"Top 15 de {opt.Combinations:N0} combinaciones"), new TextBlock { Text = string.Join('\n', top), Classes = { "mono", "small" } })));
         }
 

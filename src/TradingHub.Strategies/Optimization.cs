@@ -5,9 +5,15 @@ using TradingHub.Data;
 
 namespace TradingHub.Strategies;
 
-/// <summary>Rango de un parámetro a optimizar.</summary>
+/// <summary>
+/// Rango de un parámetro a optimizar. Además de los de la estrategia, puede ser el período de las velas
+/// (<see cref="PeriodName"/>): no cambia la estrategia sino cómo se arman sus velas, y se recorre como uno más.
+/// </summary>
 public sealed class ParameterRange
 {
+    /// <summary>Nombre del «parámetro» del período de las velas.</summary>
+    public const string PeriodName = "__Periodo";
+
     public string Name { get; set; } = "";
     public string Label { get; set; } = "";
     public bool Enabled { get; set; } = true;
@@ -15,6 +21,41 @@ public sealed class ParameterRange
     public double Max { get; set; }
     public double Step { get; set; } = 1;
     public bool IsInteger { get; set; }
+
+    /// <summary>Para el período de las velas: los períodos a probar (códigos como M15 o H1), del más corto al más largo.</summary>
+    public List<string> Choices { get; set; } = new();
+
+    public bool IsPeriod => Name == PeriodName;
+
+    public ParameterRange Clone() =>
+        new() { Name = Name, Label = Label, Enabled = Enabled, Min = Min, Max = Max, Step = Step, IsInteger = IsInteger, Choices = Choices.ToList() };
+
+    /// <summary>El período de las velas como un parámetro más: se prueba cada uno de <paramref name="periods"/>.</summary>
+    public static ParameterRange Periods(IEnumerable<string> periods, bool enabled = true)
+    {
+        var r = new ParameterRange { Name = PeriodName, Label = "Período", Enabled = enabled, IsInteger = true };
+        r.SetChoices(periods);
+        return r;
+    }
+
+    /// <summary>Los períodos a probar: solo los válidos, sin repetir y del más corto al más largo (vecinos para la meseta).</summary>
+    public void SetChoices(IEnumerable<string> periods)
+    {
+        Choices = periods.Select(p => ChartPeriod.TryParse(p, out var cp) ? cp : (ChartPeriod?)null).OfType<ChartPeriod>().Distinct()
+            .OrderBy(p => p.IsTimeBased ? 0 : 1).ThenBy(p => p.ApproxDuration).ThenBy(p => p.Type).ThenBy(p => p.Value)
+            .Select(p => p.Code).ToList();
+        Min = 0;
+        Max = Math.Max(0, Choices.Count - 1);
+        Step = 1;
+    }
+
+    /// <summary>El valor de una combinación como número (un período, por su lugar en la lista).</summary>
+    public double? Numeric(object? value)
+    {
+        if (Choices.Count == 0) return Robustness.ToDouble(value);
+        int i = value == null ? -1 : Choices.IndexOf(value.ToString()!);
+        return i >= 0 ? i : null;
+    }
 
     public IEnumerable<double> Values()
     {
@@ -180,6 +221,19 @@ public static class Optimizer
     public static bool CanCompress(Type strategyType, string period) =>
         ChartPeriod.TryParse(period, out var p) && (p.IsTimeBased || p.Type == PeriodType.Range) && !Strategy.UsesTicks(strategyType);
 
+    /// <summary>Se pueden juntar los ticks si se puede con todos los períodos que se prueban.</summary>
+    private static bool CanCompress(Type strategyType, ParameterSpace space, BacktestSettings settings) =>
+        (space.Periods.Count > 0 ? space.Periods : new[] { settings.Period }).All(p => CanCompress(strategyType, p));
+
+    /// <summary>Los ajustes de una combinación: con su período si el período se optimiza (si no, los mismos).</summary>
+    public static BacktestSettings SettingsFor(BacktestSettings settings, IReadOnlyDictionary<string, object?> combo)
+    {
+        if (!combo.TryGetValue(ParameterRange.PeriodName, out var p) || p is not string period) return settings;
+        var s = settings.Clone();
+        s.Period = period;
+        return s;
+    }
+
     /// <summary>Prueba todas las combinaciones en paralelo, ordena por la métrica elegida y recomienda la mejor meseta.</summary>
     public static OptimizationResult Optimize(Func<Strategy> factory, Dictionary<string, object?> baseParameters, IReadOnlyList<ParameterRange> ranges,
         TickData data, BacktestSettings settings, FitnessMetric metric, int minTrades, IProgress<double>? progress, CancellationToken ct, int maxParallel = 0,
@@ -187,8 +241,8 @@ public static class Optimizer
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var type = factory().GetType();
-        if (!data.Compressed && CanCompress(type, settings.Period)) data = data.Compress();
         var space = new ParameterSpace(ranges, type);
+        if (!data.Compressed && CanCompress(type, space, settings)) data = data.Compress();
         var combos = space.All().ToList();
         var rows = new ConcurrentBag<OptimizationRow>();
         int done = 0;
@@ -199,7 +253,7 @@ public static class Optimizer
             var s = factory();
             s.SetParameters(baseParameters);
             s.SetParameters(combo);
-            var r = new BacktestEngine(s, data, settings) { ContextHistory = contextHistory }.Run(ct);
+            var r = new BacktestEngine(s, data, SettingsFor(settings, combo)) { ContextHistory = contextHistory }.Run(ct);
             if (r.Ok)
             {
                 double fitness = r.Metrics.TotalTrades < minTrades ? double.NegativeInfinity : r.Metrics.Fitness(metric);
@@ -244,8 +298,8 @@ public static class Optimizer
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var type = factory().GetType();
         int raw = data.Count;
-        if (!data.Compressed && CanCompress(type, settings.Period)) data = data.Compress();
         var space = new ParameterSpace(ranges, type);
+        if (!data.Compressed && CanCompress(type, space, settings)) data = data.Compress();
         bool grid = search == SearchMode.Grid || (search == SearchMode.Auto && space.Size <= GridLimit);
         int parallel = maxParallel > 0 ? maxParallel : Math.Max(1, Environment.ProcessorCount - 1);
         if (budget <= 0) budget = DefaultBudget;

@@ -66,11 +66,13 @@ las compila, las prueba y arma reportes, y un agente que reparte el riesgo de tu
 - **Optimización bayesiana** (TPE) y **walk-forward inteligente**: elige mesetas estables en vez de picos, comprime ticks
   para ir más rápido y mide la sobreoptimización con **PBO (CSCV)** y **CPCV con embargo**. La librería trae además el
   **Sharpe deflactado** y una validación completa para usar desde código.
+- El **timeframe** se optimiza como un parámetro más (M1 a D1), y tus estrategias **favoritas** quedan arriba de la lista.
 - **Monte Carlo**, resultados **según el mercado** (rango, mixto o tendencia; volatilidad baja, normal o alta) y métricas de
   robustez para no confundir suerte con ventaja.
 
 ### En vivo
 - Corré estrategias en tus cuentas desde el backtester o desde un gráfico, con tamaño, pérdida diaria y drawdown máximos.
+  En el gráfico ves cómo le fue en su historia: el resultado real con costos, una mini curva y todas las estadísticas.
 - Portafolios, un **agente de riesgo con Claude** que propone el tamaño de cada una (en cuentas reales aprobás vos),
   la condición de cada mercado en tiempo real y un panel en la barra de menú de la Mac.
 - Reanudación automática al abrir y modo sin dormir (también con la tapa cerrada, si querés).

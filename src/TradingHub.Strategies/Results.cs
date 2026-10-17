@@ -189,18 +189,20 @@ public sealed class PerformanceMetrics
         m.MaxDrawdownPercent = 100 * maxDdPct;
         m.RecoveryFactor = maxDd > 0 ? m.NetProfit / maxDd : m.NetProfit > 0 ? 999 : 0;
 
-        // Sharpe y Sortino con retornos diarios
+        // Sharpe y Sortino con retornos diarios. Por debajo del capital inicial el retorno se mide sobre el capital: con
+        // la cuenta en negativo (o casi en cero) dividir por el saldo da vuelta el signo (ganar parecía perder) o explota
         var daily = new List<double>();
         if (equity.Count > 1)
         {
             DateOnly day = DateOnly.FromDateTime(equity[0].Time);
-            double prev = (double)capital, last = (double)equity[0].Equity;
+            double start = (double)capital, prev = start, last = (double)equity[0].Equity;
+            double Return() => Math.Max(prev, start) is var basis && basis > 0 ? (last - prev) / basis : 0;
             foreach (var e in equity)
             {
                 var d = DateOnly.FromDateTime(e.Time);
                 if (d != day)
                 {
-                    daily.Add(prev != 0 ? (last - prev) / prev : 0);
+                    daily.Add(Return());
                     prev = last;
                     day = d;
                 }
@@ -208,7 +210,7 @@ public sealed class PerformanceMetrics
                 last = (double)e.Equity;
             }
 
-            daily.Add(prev != 0 ? (last - prev) / prev : 0);
+            daily.Add(Return());
         }
 
         if (daily.Count > 1)

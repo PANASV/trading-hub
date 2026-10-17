@@ -124,6 +124,9 @@ public sealed class AppSettings
     public string? TimeZoneId { get; set; }
     public bool ConfirmRealOrders { get; set; } = true;
 
+    /// <summary>Estrategias favoritas (por nombre de archivo): van arriba de todo en la lista de Backtesting.</summary>
+    public List<string> FavoriteStrategies { get; set; } = new();
+
     /// <summary>Apariencia de la plataforma: "oscuro" (negro) o "claro" (blanco).</summary>
     public string ThemeMode { get; set; } = "oscuro";
 

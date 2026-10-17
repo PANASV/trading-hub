@@ -186,6 +186,60 @@ internal static class BacktestMarketScene
         Check(Result() is { } back && Equals(back.Parameters[nameof(Strategy.RegimeFilter)], RegimeFilter.All) && back.Trades.Count == all.Trades.Count,
             "«Correr en todas las condiciones» vuelve a la corrida sin filtro");
 
+        // el optimizador también prueba períodos de las velas, como un parámetro más
+        t.GetMethod("ShowTab", Any)!.Invoke(view, new object[] { "optimize" });
+        pump(0.8);
+        var periodCheck = view.GetVisualDescendants().OfType<CheckBox>().FirstOrDefault(c => c.Content as string == "Período de las velas" && c.IsEffectivelyVisible);
+        var comboText = (TextBlock)t.GetField("_comboCount", Any)!.GetValue(view)!;
+        string before = comboText.Text ?? "";
+        Check(periodCheck != null, "el optimizador tiene «Período de las velas» con los períodos para tildar");
+        if (periodCheck != null)
+        {
+            periodCheck.IsChecked = true;
+            pump(0.3);
+            var chips = view.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.ToggleButton>().Where(b => b.Content is "M15" or "H1" && b.IsEffectivelyVisible).ToList();
+            foreach (var c in chips) c.IsChecked = true;
+            pump(0.3);
+            var ranges = (System.Collections.IList)t.GetField("_state", Any)!.GetValue(view)!.GetType().GetProperty("Ranges")!.GetValue(t.GetField("_state", Any)!.GetValue(view))!;
+            var period = ranges.OfType<ParameterRange>().FirstOrDefault(r => r.IsPeriod);
+            Check(period is { Enabled: true } && period.Choices.SequenceEqual(new[] { "M15", "H1" }) && comboText.Text != before,
+                $"al tildar M15 y H1 se prueban los dos ({string.Join(", ", period?.Choices ?? new())}; {before} → {comboText.Text})");
+            window.CaptureRenderedFrame()?.Save(Path.Combine(outDir, "optimizar_periodos.png"));
+
+            // «Usar en Backtest» con una fila que eligió H1 pone ese período en el backtest
+            var pars = new Dictionary<string, object?>(((Dictionary<string, object?>)t.GetMethod("BaseParameters", Any)!.Invoke(view, null)!)) { [ParameterRange.PeriodName] = "H1" };
+            RunAndWait(() =>
+            {
+                t.GetMethod("ApplyParameters", Any)!.Invoke(view, new object[] { pars });
+                return Task.CompletedTask;
+            });
+            Check(((TextBox)t.GetField("_period", Any)!.GetValue(view)!).Text == "H1" && Result()?.Settings?.Period == "H1",
+                $"«Usar en Backtest» de una fila con período H1 corre el backtest en H1 ({Result()?.Settings?.Period})");
+            periodCheck.IsChecked = false;
+            pump(0.3);
+        }
+
+        // favoritos: la estrella de la lista de estrategias la sube a «Favoritos» (y queda guardada en los ajustes)
+        var menu = (Flyout)t.GetField("_strategyMenu", Any)!.GetValue(view)!;
+        var pickerButton = (Button)t.GetField("_strategyPicker", Any)!.GetValue(view)!;
+        menu.ShowAt(pickerButton);
+        pump(0.6);
+        int Rows() => (menu.Content as Control)?.GetVisualDescendants().OfType<TextBlock>().Count(x => x.Text == file.DisplayName) ?? 0;
+        Button? Star() => (menu.Content as Control)?.GetVisualDescendants().OfType<DockPanel>()
+            .FirstOrDefault(d => d.GetVisualDescendants().OfType<TextBlock>().Any(x => x.Text == file.DisplayName))?.Children.OfType<Button>().FirstOrDefault();
+        App.Services.Settings.FavoriteStrategies.Remove(file.FileName);
+        int rowsBefore = Rows();
+        Star()?.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        pump(0.4);
+        Check(App.Services.Settings.FavoriteStrategies.Contains(file.FileName) && Rows() == rowsBefore + 1 && menu.IsOpen,
+            $"la estrella pone la estrategia en «Favoritos», arriba de todas, sin cerrar la lista ({rowsBefore} → {Rows()} filas)");
+        if (menu.Content is Control flyoutContent) TopLevel.GetTopLevel(flyoutContent)?.CaptureRenderedFrame()?.Save(Path.Combine(outDir, "estrategias_favoritos.png"));
+        Star()?.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        pump(0.4);
+        Check(!App.Services.Settings.FavoriteStrategies.Contains(file.FileName) && Rows() == rowsBefore, "tocándola de nuevo sale de favoritos");
+        menu.Hide();
+        pump(0.3);
+
         Console.WriteLine(Failures.Count == 0 ? "SEGÚN EL MERCADO: todo OK" : $"SEGÚN EL MERCADO: {Failures.Count} falla(s)");
         return Failures.Count;
     }

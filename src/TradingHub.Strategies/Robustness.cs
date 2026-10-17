@@ -311,11 +311,11 @@ public static class Robustness
         var scores = new List<double>();
         foreach (var name in names)
         {
-            var values = windows.Select(w => w.BestParameters.TryGetValue(name, out var v) ? ToDouble(v) : null).Where(v => v != null).Select(v => v!.Value).ToList();
+            var range = ranges?.FirstOrDefault(r => r.Name == name);
+            var values = windows.Select(w => w.BestParameters.TryGetValue(name, out var v) ? range?.Numeric(v) ?? ToDouble(v) : null).Where(v => v != null).Select(v => v!.Value).ToList();
             if (values.Count < 2) continue;
             double mean = values.Average();
             double sd = Math.Sqrt(values.Sum(x => (x - mean) * (x - mean)) / values.Count);
-            var range = ranges?.FirstOrDefault(r => r.Name == name);
             double width = range != null ? range.Max - range.Min : 0;
             if (width > 0) scores.Add(sd / width);
             else if (Math.Abs(mean) > 1e-12) scores.Add(Math.Min(1, sd / Math.Abs(mean)));
@@ -339,8 +339,8 @@ public static class Robustness
             bool near = true, same = true;
             foreach (var r in ranges)
             {
-                double? a = best.Parameters.TryGetValue(r.Name, out var av) ? ToDouble(av) : null;
-                double? b = row.Parameters.TryGetValue(r.Name, out var bv) ? ToDouble(bv) : null;
+                double? a = best.Parameters.TryGetValue(r.Name, out var av) ? r.Numeric(av) : null;
+                double? b = row.Parameters.TryGetValue(r.Name, out var bv) ? r.Numeric(bv) : null;
                 if (a == null || b == null) continue;
                 double diff = Math.Abs(a.Value - b.Value);
                 if (diff > r.Step * 1.0001) near = false;

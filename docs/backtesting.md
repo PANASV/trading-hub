@@ -26,7 +26,9 @@ lo que bajaste o importaste en [Datos](datos.md). Sin nada guardado, la lista es
 - Al cambiar de instrumento el rango pasa a los últimos 7 días guardados, y la comisión % a 0,04 si es cripto (Binance
   o Bybit) o a 0 en el resto.
 
-**Período de las velas**: un código como `M5`. Hay botones para `M1`, `M5`, `M15`, `H1`, `Tick500` y `Range20`.
+**Período de las velas**: un código como `M5`. Hay botones para `M1`, `M5`, `M15`, `H1`, `H4`, `D1`, `Tick500` y
+`Range20`. No importan las mayúsculas y acepta la forma de la barra del gráfico y nombres en castellano: `d1`, `D`,
+`1D`, `Daily` o `diario` son lo mismo, igual que `5m` y `M5`, `1h` y `H1`, o `semanal` y `W1`.
 
 | Código | Tipo de vela |
 |---|---|
@@ -122,6 +124,12 @@ backtest y lo corre). Se guarda en `~/Library/Application Support/Trading Hub/Ba
 3. **Mínimo de operaciones** (10): las combinaciones con menos quedan sin métrica, para no premiar la suerte.
 4. **Optimizar**. Usa los datos y la ejecución de la pestaña Backtest y prueba todas las combinaciones (grilla), en
    paralelo con todos los núcleos menos uno.
+
+**Optimizar el timeframe.** Al final de **Qué probar** está **Período de las velas**: lo tildás y marcás los períodos
+a probar (`M1`, `M5`, `M15`, `M30`, `H1`, `H4` y `D1`). Cada combinación de parámetros se prueba en cada período
+marcado: la historia tick a tick se carga una sola vez y las velas se arman en cada período. En la tabla cada fila
+dice su período, y **Usar en Backtest** también lo copia. En el walk-forward el período se elige en cada ventana como
+un parámetro más, y la medición de sobreajuste cuenta cada período como una prueba más.
 
 La tabla muestra hasta 500 filas ordenadas por la métrica. **Usar en Backtest** (o doble clic) copia los parámetros y
 corre el backtest. La mejor fila suele ser un pico de suerte: validá con walk-forward. Las optimizaciones y los

@@ -32,6 +32,13 @@ public sealed class ChartStrategy
     internal List<ClosedTrade> History = new();
     internal OpenPosition? HistoryOpen;
     internal PerformanceMetrics? HistoryMetrics;
+
+    /// <summary>La curva de capital de la historia (con comisiones y deslizamiento) y el capital con que arrancó.</summary>
+    internal List<EquityPoint> HistoryEquity = new();
+    internal decimal HistoryCapital;
+
+    /// <summary>Los costos con que se calculó la historia (para contarlos en su configuración).</summary>
+    internal MarketCosts? HistoryCosts;
     internal List<StrategySignal> BaseSignals = new();
     internal List<TradeLink> BaseLinks = new();
     internal DateTime HistoryFrom = DateTime.MaxValue;
@@ -160,6 +167,8 @@ public sealed partial class TradingView
             cs.Overlay.Status = "calculando…";
             model.Invalidate();
             var ticks = TickData.FromStore(data.Trades);
+            // con la comisión y el deslizamiento de ese mercado (los mismos del backtest): el resultado que habría dado de verdad
+            var costs = MarketInfo.Costs(data.Instrument.FeedId, data.Instrument.Symbol);
             var settings = new BacktestSettings
             {
                 FeedId = data.Instrument.FeedId,
@@ -167,8 +176,9 @@ public sealed partial class TradingView
                 FromUtc = ticks.FirstTime,
                 ToUtc = ticks.LastTime,
                 Period = model.Period.Code,
-                CommissionPercent = 0,
-                SlippageTicks = 0,
+                CommissionPercent = costs.CommissionPercent,
+                CommissionPerUnit = costs.CommissionPerUnit,
+                SlippageTicks = costs.SlippageTicks,
                 TimeZoneId = _svc.Settings.TimeZoneId,
                 CloseAtEnd = false,
             };
@@ -182,6 +192,9 @@ public sealed partial class TradingView
             cs.History = result.Trades;
             cs.HistoryOpen = result.OpenPosition;
             cs.HistoryMetrics = result.Metrics;
+            cs.HistoryEquity = result.Equity;
+            cs.HistoryCapital = settings.InitialCapital;
+            cs.HistoryCosts = costs;
             cs.HistoryFrom = data.HistoryFrom;
             cs.HistoryCanvas = historyStrategy.Canvas;
             cs.DrawingsKey = "";
