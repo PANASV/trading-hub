@@ -2,7 +2,7 @@
 
 # Trading Hub
 
-**La plataforma de trading open source que corre 100 % en tu Mac.**
+**La plataforma de trading gratis y de código abierto que corre 100 % en tu Mac.**
 Gráficos con footprint, operación con DOM, backtesting profesional anti-sobreoptimización y estrategias con IA,
 con tus datos y tus claves siempre en tu computadora.
 
@@ -10,7 +10,7 @@ Creada por [**@ralphtradesz**](https://x.com/ralphtradesz)
 
 ¿Usás Windows? [Mirá cómo portarla con Claude](#usás-windows).
 
-[![Licencia MIT](https://img.shields.io/badge/licencia-MIT-amber.svg)](LICENSE)
+[![Licencia MIT + Commons Clause](https://img.shields.io/badge/licencia-MIT%20%2B%20Commons%20Clause-amber.svg)](LICENSE)
 ![macOS Apple Silicon](https://img.shields.io/badge/macOS-Apple%20Silicon-black.svg)
 ![.NET 10](https://img.shields.io/badge/.NET-10-512BD4.svg)
 ![Avalonia](https://img.shields.io/badge/UI-Avalonia-8B44AC.svg)
@@ -220,8 +220,13 @@ software se entrega "tal cual", sin garantías (ver la [licencia](LICENSE)).
 
 ## Licencia
 
-[MIT](LICENSE). Los indicadores portados de otras plataformas que no tienen licencia abierta no forman parte de este
-repositorio.
+[MIT con la cláusula Commons Clause](LICENSE): podés usar Trading Hub gratis (también para operar tu propia plata),
+modificarlo y compartirlo, siempre con el aviso de la licencia. Lo que no podés es **venderlo**: ni la app, ni una
+versión modificada, ni un servicio pago cuyo valor venga de Trading Hub (por ejemplo, cobrar por instalarlo, hostearlo
+o darle soporte). Por esa condición no es una licencia «open source» en el sentido estricto de la OSI: el código es
+público y gratis, pero no se puede comercializar.
+
+Los indicadores portados de otras plataformas que no tienen licencia abierta no forman parte de este repositorio.
 
 ---
 

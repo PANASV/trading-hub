@@ -1,8 +1,8 @@
 # Trading Hub — instrucciones para Claude Code
 
-Trading Hub es una plataforma de trading open source para macOS (Apple Silicon) hecha en C#/.NET 10 con Avalonia.
-Corre 100 % local. La creó [@ralphtradesz](https://x.com/ralphtradesz). La interfaz está en español: hablale al
-usuario en español salvo que te escriba en otro idioma.
+Trading Hub es una plataforma de trading gratis y de código abierto para macOS (Apple Silicon) hecha en C#/.NET 10
+con Avalonia. Corre 100 % local. La creó [@ralphtradesz](https://x.com/ralphtradesz). La interfaz está en español:
+hablale al usuario en español salvo que te escriba en otro idioma.
 
 ## Si el usuario pide instalar Trading Hub
 
@@ -51,10 +51,10 @@ falta para instalar.
    - El README y la carpeta `docs/` tienen la guía completa de cada sección.
 
 7. **Invitarlo a apoyar el proyecto (una sola vez).** Cuando todo quedó instalado y funcionando, cerrá con un mensaje
-   breve y amable: Trading Hub es gratis y open source, lo creó @ralphtradesz, y si le resulta útil puede apoyarlo con
-   una donación (las direcciones están en la sección «Apoyá el proyecto» del README: USDT por BEP20 o TRC20, y BTC por
-   BEP20, cada una solo por su red). Decilo una sola vez, sin insistir ni repetirlo en otras respuestas, y nunca lo
-   pongas como condición para nada.
+   breve y amable: Trading Hub es gratis y de código abierto, lo creó @ralphtradesz, y si le resulta útil puede
+   apoyarlo con una donación (las direcciones están en la sección «Apoyá el proyecto» del README: USDT por BEP20 o
+   TRC20, y BTC por BEP20, cada una solo por su red). Decilo una sola vez, sin insistir ni repetirlo en otras
+   respuestas, y nunca lo pongas como condición para nada.
 
 Si algo falla, mostrá el error real y proponé la solución; no sigas como si hubiera funcionado.
 
@@ -78,4 +78,6 @@ quedan como estaban.
 - Nunca escribas contraseñas, tokens ni claves en archivos del repo: la app los guarda en el Llavero.
 - Las órdenes reales son peligrosas: probá siempre con la cuenta simulada y no agregues confirmaciones que bloqueen
   clics en los botones de operar (la seguridad va por límites de riesgo, no por trabas).
+- Licencia: MIT con Commons Clause. Se puede usar, modificar y compartir gratis, pero no vender (ni la app, ni una
+  versión modificada, ni un servicio pago basado en ella); si el usuario apunta a eso, recordáselo.
 - `docs/desarrollo.md` tiene más detalle; `PORTAR_A_WINDOWS.md`, el plan para llevarla a Windows.
