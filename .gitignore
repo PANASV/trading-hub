@@ -11,3 +11,7 @@ dist/
 
 # ajustes personales de build-app.sh (certificado, bundle id)
 build.local.env
+
+# indicadores de ATAS portados en tu copia (son de ATAS: no se suben)
+third_party/
+src/TradingHub.Indicators.Technical/Atas/

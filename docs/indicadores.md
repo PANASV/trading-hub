@@ -29,10 +29,11 @@ Vienen en el proyecto `TradingHub.Indicators.Native` y en la biblioteca aparecen
 
 ### Indicadores técnicos
 
-El proyecto `TradingHub.Indicators.Technical` está pensado para una colección grande de indicadores técnicos portados
-desde ATAS. Esos indicadores no tienen una licencia abierta, así que **no se publican** en este repositorio: en la versión
-pública el proyecto solo trae lo mínimo para compilar (los tipos de editores que usan esos indicadores). Si una versión
-los incluye, Trading Hub los carga solo y aparecen en la biblioteca con los demás, por categoría.
+El proyecto `TradingHub.Indicators.Technical` está pensado para la colección de indicadores técnicos de ATAS (unos
+250). Su código es público pero no tiene una licencia abierta, así que **no se publica** en este repositorio: el proyecto
+solo trae lo mínimo para compilarlos (los tipos de editores que usan). Los sumás vos en un minuto, como se explica en
+[Sumar los indicadores de ATAS](#sumar-los-indicadores-de-atas), y Trading Hub los carga solo: aparecen en la
+biblioteca con los demás, por categoría.
 
 ## Indicadores propios
 
@@ -128,6 +129,41 @@ Si tenés indicadores ya compilados en una DLL (clases que heredan de `TradingHu
 `~/Library/Application Support/Trading Hub/Indicators` o en una carpeta `Indicators` al lado del ejecutable de la app.
 Se cargan al abrir Trading Hub y aparecen en su categoría (la de su `[Category]`, u «Otros») con la etiqueta «extra».
 Una que no se puede cargar deja un aviso y no frena al resto.
+
+## Sumar los indicadores de ATAS
+
+ATAS publica el código de sus indicadores en [AtasPlatform/Indicators](https://github.com/AtasPlatform/Indicators).
+Hay dos formas de usarlos en Trading Hub.
+
+**Todos de una vez**, dentro de la app (desde la carpeta del repositorio):
+
+```bash
+git clone https://github.com/AtasPlatform/Indicators.git third_party/ATAS-Indicators
+python3 tools/port_atas.py
+./build-app.sh --install
+```
+
+`tools/port_atas.py` copia los indicadores de la carpeta `Technical` a `src/TradingHub.Indicators.Technical/Atas`,
+cambia los namespaces de ATAS por los de Trading Hub (la tabla de abajo) sin tocar la lógica y aplica unos pocos
+arreglos para que compilen y no dividan por cero. Deja afuera lo que depende de partes internas de ATAS (sus editores
+de ventanas, el heatmap y el DOM v3). Si querés excluir otros, pasalos separados por coma en
+`TRADINGHUB_PORT_EXCLUDE=Archivo1.cs,Archivo2.cs`. Para actualizarlos cuando ATAS publique cambios:
+
+```bash
+git -C third_party/ATAS-Indicators pull
+python3 tools/port_atas.py
+./build-app.sh --install
+```
+
+`third_party/` y `src/TradingHub.Indicators.Technical/Atas/` están en el `.gitignore`: el código de ATAS queda en tu
+copia y no se sube si hacés un fork.
+
+**Uno por uno**, sin compilar la app: copiá el `.cs` en `~/Documents/Trading Hub/Indicadores` y se compila como un
+indicador propio (con la misma adaptación de namespaces). Los que usan otros indicadores de ATAS necesitan que copies
+también esos: por ejemplo, el `CCI.cs` y el `Momentum.cs` de ATAS usan su `SMA.cs`. Lo mismo vale para indicadores en C#
+de cualquier otra fuente de código público escritos para la API de ATAS.
+
+Esos indicadores son de sus autores: usalos respetando la licencia de cada fuente.
 
 ## Compatibilidad con la API de ATAS
 

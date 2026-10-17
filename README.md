@@ -41,7 +41,8 @@ las compila, las prueba y arma reportes, y un agente que reparte el riesgo de tu
 - DOM, cinta de operaciones, dibujos y plantillas.
 - Indicadores incluidos: medias móviles, VWAP con desvíos, Bollinger, RSI, MACD, volumen, delta, delta acumulado (CVD),
   perfil de volumen por sesión y grandes operaciones. Sumá los tuyos en C# (se recompilan al guardar), compatibles con
-  la API de indicadores de ATAS.
+  la API de indicadores de ATAS, y los de ATAS u otras fuentes de código público: ver
+  [Más indicadores](#más-indicadores).
 - **Replay** de cualquier día guardado, a la velocidad que quieras.
 
 ### Operar
@@ -180,6 +181,33 @@ explicalo en el texto de Ajustes. Mostrá los errores reales si algo falla; no s
 La guía completa, con el inventario de cada parte que depende de macOS y qué usar en Windows, está en
 [PORTAR_A_WINDOWS.md](PORTAR_A_WINDOWS.md). Si lo lográs, ¡abrí un *pull request* para que lo aproveche todo el mundo!
 
+## Más indicadores
+
+Trading Hub trae sus propios indicadores (medias, VWAP, Bollinger, RSI, MACD, volumen, delta, CVD, perfil de volumen y
+grandes operaciones). Los de otras plataformas no vienen en el repositorio porque su código no tiene una licencia que
+permita redistribuirlo, pero **los podés sumar vos** desde su código público:
+
+**Los de ATAS, todos de una vez** (unos 250, desde su repositorio público
+[AtasPlatform/Indicators](https://github.com/AtasPlatform/Indicators)):
+
+```bash
+git clone https://github.com/AtasPlatform/Indicators.git third_party/ATAS-Indicators
+python3 tools/port_atas.py
+./build-app.sh --install
+```
+
+El script adapta los namespaces de ATAS a los de Trading Hub sin tocar la lógica (y corrige un par de detalles para que
+compilen), y aparecen en la biblioteca de indicadores con los demás. Para actualizarlos cuando ATAS publique cambios:
+`git -C third_party/ATAS-Indicators pull` y repetí los dos últimos pasos. Las dos carpetas que se crean están en el
+`.gitignore`, así que no se suben si hacés un fork.
+
+**Uno suelto, de ATAS o de cualquier otra fuente de código público en C#:** copiá el `.cs` en
+`~/Documents/Trading Hub/Indicadores`. Trading Hub lo compila solo, adapta los namespaces de ATAS y lo suma a la
+biblioteca. Si usa otro indicador (por ejemplo, el CCI de ATAS usa su SMA), copiá también ese.
+
+Esos indicadores son de sus autores: usalos respetando la licencia de cada fuente. Más detalles en
+[docs/indicadores.md](docs/indicadores.md).
+
 ## Documentación
 
 | | |
@@ -226,7 +254,8 @@ versión modificada, ni un servicio pago cuyo valor venga de Trading Hub (por ej
 o darle soporte). Por esa condición no es una licencia «open source» en el sentido estricto de la OSI: el código es
 público y gratis, pero no se puede comercializar.
 
-Los indicadores portados de otras plataformas que no tienen licencia abierta no forman parte de este repositorio.
+Los indicadores portados de otras plataformas que no tienen licencia abierta no forman parte de este repositorio, pero
+los podés sumar vos desde su código público (ver [Más indicadores](#más-indicadores)).
 
 ---
 
