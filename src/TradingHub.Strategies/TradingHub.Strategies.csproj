@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>TradingHub.Strategies</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TradingHub.Core\TradingHub.Core.csproj" />
+  </ItemGroup>
+</Project>

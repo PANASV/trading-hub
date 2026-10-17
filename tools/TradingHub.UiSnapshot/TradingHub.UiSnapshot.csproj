@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>TradingHub.UiSnapshot</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\TradingHub.App\TradingHub.App.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Rithmic de mentira: las capturas nunca entran con el usuario real -->
+    <Compile Include="..\..\tests\TradingHub.Tests\FakeRithmicServer.cs" Link="FakeRithmicServer.cs" />
+    <!-- y los de OANDA, Alpaca, Databento, cTrader y Tradovate -->
+    <Compile Include="..\..\tests\TradingHub.Tests\FakeHttpServer.cs" Link="FakeHttpServer.cs" />
+    <Compile Include="..\..\tests\TradingHub.Tests\FakeBrokers.cs" Link="FakeBrokers.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="Avalonia.Skia" Version="$(AvaloniaVersion)" />
+  </ItemGroup>
+</Project>

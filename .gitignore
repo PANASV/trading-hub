@@ -1,0 +1,13 @@
+# compilados
+bin/
+obj/
+dist/
+*.user
+.vs/
+.idea/
+
+# macOS
+.DS_Store
+
+# ajustes personales de build-app.sh (certificado, bundle id)
+build.local.env

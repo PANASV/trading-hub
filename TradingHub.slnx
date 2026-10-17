@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TradingHub.Core/TradingHub.Core.csproj" />
+    <Project Path="src/TradingHub.Sdk/TradingHub.Sdk.csproj" />
+    <Project Path="src/TradingHub.Charting/TradingHub.Charting.csproj" />
+    <Project Path="src/TradingHub.Scripting/TradingHub.Scripting.csproj" />
+    <Project Path="src/TradingHub.Strategies/TradingHub.Strategies.csproj" />
+    <Project Path="src/TradingHub.Indicators.Native/TradingHub.Indicators.Native.csproj" />
+    <Project Path="src/TradingHub.Indicators.Technical/TradingHub.Indicators.Technical.csproj" />
+    <Project Path="src/TradingHub.App/TradingHub.App.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TradingHub.Tests/TradingHub.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/TradingHub.UiSnapshot/TradingHub.UiSnapshot.csproj" />
+  </Folder>
+</Solution>

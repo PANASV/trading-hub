@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>TradingHub.Charting</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TradingHub.Core\TradingHub.Core.csproj" />
+    <ProjectReference Include="..\TradingHub.Sdk\TradingHub.Sdk.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>TradingHub.Indicators.Native</RootNamespace>
+    <Nullable>annotations</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TradingHub.Sdk\TradingHub.Sdk.csproj" />
+  </ItemGroup>
+</Project>

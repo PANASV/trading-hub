@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>TradingHub.Indicators.Technical</RootNamespace>
+    <Nullable>annotations</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <DefineConstants>$(DefineConstants);CROSS_PLATFORM</DefineConstants>
+    <NoWarn>$(NoWarn);CS0618;CS0612;CS0067;CS0169;CS0414;CS0649;CS8632;CS0108;CS0114;CS0162;CS0219;CS1998;CS4014</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TradingHub.Sdk\TradingHub.Sdk.csproj" />
+  </ItemGroup>
+</Project>
