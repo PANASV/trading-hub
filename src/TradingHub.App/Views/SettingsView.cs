@@ -42,7 +42,7 @@ internal sealed class SettingsView : UserControl, IPage
         // zona horaria: las habituales primero
         var tz = new ComboBox { MinWidth = 320 };
         var common = new[] { "America/Argentina/Buenos_Aires", "America/New_York", "America/Chicago", "Europe/London", "Europe/Madrid", "UTC" };
-        tz.Items.Add(new ComboBoxItem { Content = $"Hora de esta Mac ({TimeZoneInfo.Local.Id})", Tag = "" });
+        tz.Items.Add(new ComboBoxItem { Content = $"Hora de esta {Os.Device} ({TimeZoneInfo.Local.Id})", Tag = "" });
         foreach (var id in common)
             if (TimeZoneInfo.TryFindSystemTimeZoneById(id, out var z)) tz.Items.Add(new ComboBoxItem { Content = Label(z), Tag = z.Id });
         tz.Items.Add(new Separator());
@@ -134,9 +134,12 @@ internal sealed class SettingsView : UserControl, IPage
             s.KeepInMenuBar = v;
             Services.MenuBar.Current?.Refresh();
         });
+        var stay = Os.IsWindows
+            ? Setting("Seguir en la bandeja del sistema al cerrar la ventana", "Cerrar la ventana no cierra Trading Hub: queda abajo a la derecha, en la bandeja del sistema (junto al reloj; si no lo ves, tocá la flechita ^), con las estrategias en vivo trabajando. Tocando su ícono se abre un panel con las estrategias y las posiciones en tiempo real; con clic derecho, un menú. Para cerrarla del todo: Alt+F4 o «Salir de Trading Hub» en ese panel.", menuBar)
+            : Setting("Seguir en la barra de menú al cerrar la ventana", "Cerrar la ventana no cierra Trading Hub: queda arriba a la derecha, en la barra de menú, con las estrategias en vivo trabajando. Tocando su ícono se abre un panel con las estrategias y las posiciones en tiempo real. Para cerrarla del todo: ⌘Q o «Salir de Trading Hub» en ese panel.", menuBar);
         return Section("Estrategias en vivo", MaterialIconKind.PlayCircleOutline,
-            Setting("Seguir en la barra de menú al cerrar la ventana", "Cerrar la ventana no cierra Trading Hub: queda arriba a la derecha, en la barra de menú, con las estrategias en vivo trabajando. Tocando su ícono se abre un panel con las estrategias y las posiciones en tiempo real. Para cerrarla del todo: ⌘Q o «Salir de Trading Hub» en ese panel.", menuBar),
-            Setting("Reanudarlas solas al abrir Trading Hub", "Las que estaban corriendo cuando se cerró Trading Hub (o se apagó la Mac) vuelven a arrancar solas unos segundos después de abrir, con sus mismos parámetros, tamaño y límites; las pausadas vuelven pausadas. Apagado: esperan que las reanudes desde En vivo.", auto),
+            stay,
+            Setting("Reanudarlas solas al abrir Trading Hub", $"Las que estaban corriendo cuando se cerró Trading Hub (o se apagó la {Os.Device}) vuelven a arrancar solas unos segundos después de abrir, con sus mismos parámetros, tamaño y límites; las pausadas vuelven pausadas. Apagado: esperan que las reanudes desde En vivo.", auto),
             Setting("También las de cuentas reales", "Apagado (recomendado): las que operan dinero real esperan que las reanudes vos. Encendido: arrancan solas como las demás.", real),
             Setting("Elegir el contrato solo (minis o micros)", "Si el tamaño de una estrategia de futuros pide una fracción del mini (por ejemplo 1 NQ × 0,5), las órdenes van al micro con la misma exposición (5 MNQ), mirando el mismo gráfico. Con minis enteros usa el mini. Con una posición abierta sigue en el mismo contrato y cambia cuando queda plana.", smart));
     }
@@ -165,6 +168,17 @@ internal sealed class SettingsView : UserControl, IPage
     {
         var s = _svc.Settings;
         var awake = Switch(s.KeepAwake, v => s.KeepAwake = v);
+        if (!SleepGuard.SupportsLidClosed)
+        {
+            // Windows: la tapa cerrada la maneja la configuración de energía (Trading Hub no la puede evitar): se explica cómo
+            var powerOptions = Ui.Button("Opciones de energía", MaterialIconKind.Power, Shell.OpenWindowsPowerOptions);
+            RefreshSleep();
+            return Section("Modo sin dormir", MaterialIconKind.SleepOff,
+                Setting("Mantener la PC despierta", "Mientras haya estrategias en vivo o agentes de Claude trabajando, la PC no se suspende por inactividad (la pantalla sí se puede apagar). Sin contraseña.", awake),
+                Setting("Con la tapa cerrada", "Al cerrar la tapa de una notebook, Windows hace lo que diga su configuración de energía (casi siempre, suspenderse) y Trading Hub no lo puede evitar. Para que siga funcionando así: Opciones de energía → «Elegir el comportamiento del cierre de la tapa» → «No hacer nada», mejor solo con el cargador conectado. Con la tapa cerrada la notebook no ventila igual: no la guardes en un bolso así.", powerOptions),
+                _sleepState);
+        }
+
         var power = Switch(s.LidClosedOnlyOnPower, v => s.LidClosedOnlyOnPower = v);
         var lid = Switch(s.KeepAwakeLidClosed, v =>
         {
@@ -186,7 +200,7 @@ internal sealed class SettingsView : UserControl, IPage
         var g = _svc.Sleep;
         string reason = _svc.AwakeReason() ?? "no hay nada corriendo";
         _sleepState.Text = (g.Awake ? $"Ahora: despierta ({g.Reason})." : $"Ahora: puede dormir ({reason}).") +
-                           (g.LidHelperRunning ? " Tapa cerrada: activo." : _svc.Settings.KeepAwakeLidClosed ? " Tapa cerrada: se activa cuando haya algo corriendo." : "") +
+                           (!SleepGuard.SupportsLidClosed ? "" : g.LidHelperRunning ? " Tapa cerrada: activo." : _svc.Settings.KeepAwakeLidClosed ? " Tapa cerrada: se activa cuando haya algo corriendo." : "") +
                            (g.LidError != null ? " " + g.LidError : "");
     }
 
@@ -205,7 +219,7 @@ internal sealed class SettingsView : UserControl, IPage
             {
                 var def = h;
                 var key = new Button { MinWidth = 150, HorizontalContentAlignment = HorizontalAlignment.Center, Padding = new Thickness(10, 4) };
-                ToolTip.SetTip(key, "Hacé clic y presioná la combinación. Esc cancela · ⌫ lo deja sin asignar.");
+                ToolTip.SetTip(key, Os.IsWindows ? "Hacé clic y presioná la combinación. Esc cancela · Retroceso lo deja sin asignar." : "Hacé clic y presioná la combinación. Esc cancela · ⌫ lo deja sin asignar.");
                 _hotkeyButtons[def.Id] = key;
                 bool capturing = false;
                 key.Click += (_, _) =>

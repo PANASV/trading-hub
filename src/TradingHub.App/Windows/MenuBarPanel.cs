@@ -11,7 +11,7 @@ using TradingHub.App.Services;
 namespace TradingHub.App.Windows;
 
 /// <summary>
-/// El panel que se abre desde el ícono de Trading Hub en la barra de menú: estrategias en vivo (estado, posición y resultado),
+/// El panel que se abre desde el ícono de Trading Hub en la barra de menú (en Windows, la bandeja del sistema): estrategias en vivo (estado, posición y resultado),
 /// posiciones abiertas de las cuentas, en tiempo real. Abre Trading Hub o sale del todo.
 /// </summary>
 internal sealed class MenuBarPanel : Window
@@ -58,7 +58,8 @@ internal sealed class MenuBarPanel : Window
         var foot = new DockPanel();
         DockPanel.SetDock(quit, Dock.Right);
         foot.Children.Add(quit);
-        foot.Children.Add(new TextBlock { Text = "Cerrar la ventana deja a Trading Hub corriendo acá arriba.", Classes = { "faint", "small" }, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap });
+        var stays = Os.IsWindows ? "Cerrar la ventana deja a Trading Hub corriendo acá, en la bandeja del sistema." : "Cerrar la ventana deja a Trading Hub corriendo acá arriba.";
+        foot.Children.Add(new TextBlock { Text = stays, Classes = { "faint", "small" }, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap });
 
         var body = new StackPanel { Spacing = 14 };
         body.Children.Add(Section(_strategiesTitle, _strategies));

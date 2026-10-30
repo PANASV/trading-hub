@@ -42,7 +42,7 @@ internal sealed partial class StrategiesView
     private readonly EquityChart _equity = new() { Height = 270 };
     private readonly ListBox _tradesList = new() { Background = Brushes.Transparent };
     private readonly Grid _metricsGrid = new() { ColumnDefinitions = new ColumnDefinitions("*,20,*") };
-    private readonly TextBox _logBox = new() { IsReadOnly = true, AcceptsReturn = true, FontFamily = new FontFamily("Menlo, monospace"), FontSize = 11.5, TextWrapping = TextWrapping.NoWrap };
+    private readonly TextBox _logBox = new() { IsReadOnly = true, AcceptsReturn = true, FontFamily = Ui.MonoFont, FontSize = 11.5, TextWrapping = TextWrapping.NoWrap };
     private readonly EquityChart _mcChart = new() { Height = 260, EmptyText = "Corré la simulación para ver caminos posibles" };
     private readonly WrapPanel _mcKpis = new() { ItemSpacing = 10, LineSpacing = 10 };
     private readonly Panel _resultsPanel = new();

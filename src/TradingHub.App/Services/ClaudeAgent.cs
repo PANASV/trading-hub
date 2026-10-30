@@ -109,7 +109,7 @@ public sealed class ClaudeAgent
     public async Task<ClaudeAgentResult> RunAsync(ClaudeAgentRequest req, CancellationToken ct)
     {
         var cli = ClaudeCodeBridge.FindCli();
-        if (cli == null) return new ClaudeAgentResult(false, "", null, 0, 0, "No encontré Claude Code en esta Mac (instalalo desde claude.com/claude-code).", false, 0);
+        if (cli == null) return new ClaudeAgentResult(false, "", null, 0, 0, $"No encontré Claude Code en esta {Os.Device} (instalalo desde claude.com/claude-code).", false, 0);
 
         var supports = await SupportsAsync(cli);
         Directory.CreateDirectory(req.WorkDir);
@@ -124,6 +124,7 @@ public sealed class ClaudeAgent
             psi.Environment["MCP_TIMEOUT"] = "60000";
         }
 
+        var stdinPrompt = ClaudeCodeBridge.MovePromptToStdinIfTooLong(psi);
         var sw = Stopwatch.StartNew();
         var finalText = new StringBuilder();
         var allText = new StringBuilder();
@@ -138,7 +139,7 @@ public sealed class ClaudeAgent
         try
         {
             proc = Process.Start(psi)!;
-            proc.StandardInput.Close();
+            _ = ClaudeCodeBridge.FeedStdinAsync(proc, stdinPrompt);
             proc.ErrorDataReceived += (_, e) =>
             {
                 if (e.Data != null && stderr.Length < 20000) stderr.AppendLine(e.Data);

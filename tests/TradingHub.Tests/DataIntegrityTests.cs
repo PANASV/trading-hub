@@ -57,6 +57,14 @@ public class DataIntegrityTests
             }
 
             a.Flush();
+            // en Windows el sistema no deja abrir un segundo escritor del mismo archivo: la mezcla no puede pasar
+            if (OperatingSystem.IsWindows())
+            {
+                Assert.Throws<IOException>(() => new TickFile.Writer(path, Btc));
+                a.Dispose();
+                return;
+            }
+
             var b = new TickFile.Writer(path, Btc);
             for (int i = 20_000; i < 21_000; i++) a.Write(trades[i]);
             a.Flush();
@@ -130,7 +138,8 @@ public class DataIntegrityTests
             using var first = TickFile.TryLock(dir, "binance-futures", "BTCUSDT");
             Assert.NotNull(first);
             Assert.Null(TickFile.TryLock(dir, "binance-futures", "BTCUSDT"));
-            Assert.NotNull(TickFile.TryLock(dir, "binance-futures", "ETHUSDT")); // otro instrumento sí
+            using var eth = TickFile.TryLock(dir, "binance-futures", "ETHUSDT");
+            Assert.NotNull(eth); // otro instrumento sí
             first!.Dispose();
             using var again = TickFile.TryLock(dir, "binance-futures", "BTCUSDT");
             Assert.NotNull(again);

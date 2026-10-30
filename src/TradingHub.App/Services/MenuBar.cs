@@ -13,6 +13,8 @@ namespace TradingHub.App.Services;
 /// Trading Hub en la barra de menú de la Mac (arriba a la derecha): al tocar su ícono se abre un panel con las estrategias en
 /// vivo, las posiciones y lo que están haciendo los agentes. Cerrar la ventana deja a Trading Hub corriendo ahí (si está
 /// activado en Ajustes); se sale del todo con ⌘Q o con «Salir de Trading Hub» del panel.
+/// En Windows va en la bandeja del sistema (abajo a la derecha): clic abre el panel, clic derecho el menú, y se sale del
+/// todo con Alt+F4 o con «Salir de Trading Hub».
 /// </summary>
 internal sealed class MenuBar
 {
@@ -29,8 +31,10 @@ internal sealed class MenuBar
     {
         _svc = svc;
         _main = main;
-        _tray = new TrayIcon { Icon = new WindowIcon(Glyph()), ToolTipText = TradingHub.Common.Product.Name, IsVisible = svc.Settings.KeepInMenuBar };
-        MacOSProperties.SetIsTemplateIcon(_tray, true); // se pinta blanco o negro según la barra, como los íconos del sistema
+        // en Windows, el ícono de la app a color (la serpiente negra no se vería sobre la barra de tareas oscura)
+        var icon = OperatingSystem.IsWindows() && AppIcon.Window is { } appIcon ? appIcon : new WindowIcon(Glyph());
+        _tray = new TrayIcon { Icon = icon, ToolTipText = TradingHub.Common.Product.Name, IsVisible = svc.Settings.KeepInMenuBar };
+        if (OperatingSystem.IsMacOS()) MacOSProperties.SetIsTemplateIcon(_tray, true); // se pinta blanco o negro según la barra, como los íconos del sistema
         // en macOS el clic en el ícono abre su menú (sin menú no llega ningún aviso): el menú trae lo que corre, en vivo
         _tray.Menu = _menu;
         _menu.NeedsUpdate += (_, _) => RefreshMenu();
@@ -43,6 +47,13 @@ internal sealed class MenuBar
         _tray.Clicked += (_, _) => TogglePanel();
         RefreshMenu();
         _menuTimer.Tick += (_, _) => RefreshMenu();
+        if (OperatingSystem.IsWindows())
+        {
+            // Windows arma el menú del clic derecho con lo que tenga en ese momento (no avisa antes de abrirlo): se mantiene al día
+            _menuTimer.Interval = TimeSpan.FromSeconds(3);
+            _menuTimer.Start();
+        }
+
         TrayIcon.SetIcons(app, new TrayIcons { _tray });
 
         // tocar el ícono del Dock con la ventana cerrada la vuelve a abrir
@@ -55,10 +66,10 @@ internal sealed class MenuBar
 
     public static MenuBar? Current { get; private set; }
 
-    /// <summary>En herramientas y pruebas (datos en otra carpeta) no se pone nada en la barra de menú.</summary>
+    /// <summary>En herramientas y pruebas (datos en otra carpeta) no se pone nada en la barra de menú ni en la bandeja.</summary>
     public static MenuBar? Install(Application app, AppServices svc, MainWindow main)
     {
-        if (!OperatingSystem.IsMacOS() || Environment.GetEnvironmentVariable("TRADINGHUB_DATA_DIR") is { Length: > 0 }) return null;
+        if (!(OperatingSystem.IsMacOS() || OperatingSystem.IsWindows()) || Environment.GetEnvironmentVariable("TRADINGHUB_DATA_DIR") is { Length: > 0 }) return null;
         try
         {
             Current = new MenuBar(app, svc, main);
@@ -183,7 +194,7 @@ internal sealed class MenuBar
         }
     }
 
-    /// <summary>El panel completo (más detalle que el menú), debajo de la barra.</summary>
+    /// <summary>El panel completo (más detalle que el menú), debajo de la barra (en Windows, arriba de la barra de tareas).</summary>
     public void ShowPanel()
     {
         _panel ??= CreatePanel();
@@ -219,12 +230,33 @@ internal sealed class MenuBar
             p.Hide();
             _panelHiddenAt = DateTime.UtcNow;
         };
+        if (OperatingSystem.IsWindows())
+        {
+            // va pegado a la barra de tareas por abajo: si cambia de alto (más estrategias, menos posiciones) se vuelve a ubicar
+            p.SizeChanged += (_, _) =>
+            {
+                if (p.IsVisible) PlaceOnWindows(p);
+            };
+            // Alt+F4 sobre el panel lo cierra del todo: el próximo clic arma uno nuevo
+            p.Closed += (_, _) =>
+            {
+                if (ReferenceEquals(_panel, p)) _panel = null;
+            };
+        }
+
         return p;
     }
 
     /// <summary>Debajo del ícono (donde está el mouse al tocarlo), sin salirse de la pantalla.</summary>
     private void Place(Window panel)
     {
+        if (OperatingSystem.IsWindows())
+        {
+            _trayClick = CursorPosition();
+            PlaceOnWindows(panel);
+            return;
+        }
+
         var screens = _main.Screens;
         var primary = screens.Primary ?? screens.All.FirstOrDefault();
         if (primary == null) return;
@@ -243,6 +275,62 @@ internal sealed class MenuBar
         int x = mouse is { } p0 ? p0.X - width / 2 : area.Right - width - (int)(12 * screen.Scaling);
         x = Math.Clamp(x, area.X + (int)(8 * screen.Scaling), Math.Max(area.X, area.Right - width - (int)(8 * screen.Scaling)));
         panel.Position = new PixelPoint(x, area.Y + (int)(6 * screen.Scaling));
+    }
+
+    // ===================================================================== Windows
+
+    /// <summary>Dónde estaba el mouse al tocar el ícono de la bandeja (null si Windows no lo dijo).</summary>
+    private PixelPoint? _trayClick;
+
+    /// <summary>Arriba del ícono de la bandeja (o abajo si la barra de tareas está arriba), dentro del área de trabajo.</summary>
+    private void PlaceOnWindows(Window panel)
+    {
+        var screens = _main.Screens;
+        var screen = (_trayClick is { } click ? screens.ScreenFromPoint(click) : null) ?? screens.Primary ?? screens.All.FirstOrDefault();
+        if (screen == null) return;
+        var area = screen.WorkingArea;
+        double scale = screen.Scaling;
+        // el alto real se sabe recién al mostrarlo (se ajusta al contenido): hasta ahí, uno aproximado
+        double height = panel.Bounds.Height > 0 ? panel.Bounds.Height : 420;
+        var size = new PixelSize((int)Math.Ceiling(panel.Width * scale), (int)Math.Ceiling(height * scale));
+        // sin la posición del mouse: abajo a la derecha, donde suele estar la bandeja
+        var anchor = _trayClick ?? new PixelPoint(area.Right, area.Bottom);
+        panel.Position = TrayPanelPosition(area, anchor, size, (int)Math.Round(8 * scale));
+    }
+
+    /// <summary>
+    /// La posición del panel (en píxeles de pantalla): centrado en el clic y arriba de él, apoyado sobre la barra de tareas;
+    /// si la barra está arriba o a un costado, queda pegado a ella. Nunca se sale del área de trabajo.
+    /// </summary>
+    internal static PixelPoint TrayPanelPosition(PixelRect area, PixelPoint click, PixelSize panel, int gap)
+    {
+        int x = Math.Clamp(click.X - panel.Width / 2, area.X + gap, Math.Max(area.X + gap, area.Right - panel.Width - gap));
+        int y = Math.Clamp(Math.Min(click.Y, area.Bottom) - panel.Height - gap, area.Y + gap, Math.Max(area.Y + gap, area.Bottom - panel.Height - gap));
+        return new PixelPoint(x, y);
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Win32Point
+    {
+        public int X;
+        public int Y;
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetCursorPos(out Win32Point point);
+
+    /// <summary>Dónde está el mouse, en píxeles de pantalla (los mismos de Avalonia: la app maneja los DPI por monitor).</summary>
+    internal static PixelPoint? CursorPosition()
+    {
+        try
+        {
+            return GetCursorPos(out var p) ? new PixelPoint(p.X, p.Y) : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     // ===================================================================== macOS

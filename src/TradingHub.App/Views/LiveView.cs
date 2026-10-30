@@ -360,7 +360,7 @@ internal sealed partial class LiveView : UserControl, IPage
     }
 
     private static TextBlock Num(string text, IBrush? color = null) =>
-        new() { Text = text, HorizontalAlignment = HorizontalAlignment.Right, Foreground = color ?? Ui.Text0, FontFamily = new FontFamily("Menlo, SF Mono"), FontSize = 12.5 };
+        new() { Text = text, HorizontalAlignment = HorizontalAlignment.Right, Foreground = color ?? Ui.Text0, FontFamily = Ui.MonoFont, FontSize = 12.5 };
 
     /// <summary>El tamaño y, abajo, cuántos contratos y de cuál manda cada orden (en el color de acento si es el micro).</summary>
     private static Control SizeCell(LiveEntry e, decimal size, OrderPlan plan)

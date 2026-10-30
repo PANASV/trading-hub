@@ -15,7 +15,8 @@ namespace TradingHub.App.Views;
 
 /// <summary>
 /// Conexiones: perfiles de datos y cuentas (Rithmic, Binance, Bybit, Interactive Brokers y simulador).
-/// Las contraseñas y API secrets se guardan en el Llavero de macOS, nunca en archivos.
+/// Las contraseñas y API secrets se guardan en el Llavero de macOS (en Windows, en el Administrador de credenciales), nunca
+/// en archivos.
 /// </summary>
 internal sealed class ConnectionsView : UserControl, IPage
 {
@@ -301,7 +302,7 @@ internal sealed class ConnectionsView : UserControl, IPage
         delete.Click += async (_, _) =>
         {
             if (TopLevel.GetTopLevel(this) is not Window w) return;
-            if (!await ConfirmDialog.ShowAsync(w, "Eliminar conexión", $"Se borra \"{p.Name}\" y sus secretos del Llavero. Los datos grabados no se tocan.", "Eliminar", danger: true)) return;
+            if (!await ConfirmDialog.ShowAsync(w, "Eliminar conexión", $"Se borra \"{p.Name}\" y sus secretos {(Os.IsWindows ? "del Administrador de credenciales" : "del Llavero")}. Los datos grabados no se tocan.", "Eliminar", danger: true)) return;
             _svc.Connections.ClearSecrets(p);
             _svc.Connections.Invalidate(p);
             _svc.Connections.Profiles.Remove(p);
@@ -363,7 +364,7 @@ internal sealed class ConnectionsView : UserControl, IPage
     {
         var testnet = new ToggleSwitch { IsChecked = p.Testnet, OnContent = "Testnet (dinero de prueba)", OffContent = "Cuenta real" };
         var key = new TextBox { Text = p.ApiKey, Watermark = "API key" };
-        var secret = new TextBox { PasswordChar = '•', Watermark = string.IsNullOrEmpty(_svc.Connections.GetSecret(p)) ? "API secret" : "•••••••• (guardado en el Llavero)" };
+        var secret = new TextBox { PasswordChar = '•', Watermark = string.IsNullOrEmpty(_svc.Connections.GetSecret(p)) ? "API secret" : $"•••••••• (guardado en {Os.SecretStoreShort})" };
         var allowReal = new CheckBox { Content = "Permitir órdenes REALES desde Trading Hub", IsChecked = p.AllowRealOrders };
         var confirm = new CheckBox { Content = "Pedir confirmación antes de cada orden real", IsChecked = p.ConfirmOrders };
         var maxQty = new NumericUpDown { Value = p.MaxOrderQuantity, Minimum = 0, Increment = 0.001m, FormatString = "0.#####", Watermark = "sin límite" };
@@ -399,7 +400,7 @@ internal sealed class ConnectionsView : UserControl, IPage
 
         return Ui.V(14,
             Ui.H2("Cuenta para operar"),
-            Note(MaterialIconKind.ShieldKeyOutline, "Creá una API key solo con permiso de trading (sin retiros). El secret se guarda en el Llavero de macOS."),
+            Note(MaterialIconKind.ShieldKeyOutline, "Creá una API key solo con permiso de trading (sin retiros). El secret se guarda en " + (Os.IsWindows ? "el Administrador de credenciales de Windows." : "el Llavero de macOS.")),
             testnet,
             TwoColumns(Ui.Field("API key", key), Ui.Field("API secret", secret)),
             help,
@@ -549,7 +550,7 @@ internal sealed class ConnectionsView : UserControl, IPage
         serverRow.Children.Add(server);
 
         var user = new TextBox { Text = p.RithmicUser, Watermark = "usuario (Login)" };
-        var pass = new TextBox { PasswordChar = '•', RevealPassword = false, Watermark = string.IsNullOrEmpty(_svc.Connections.GetSecret(p)) ? "contraseña" : "•••••••• (guardada en el Llavero)" };
+        var pass = new TextBox { PasswordChar = '•', RevealPassword = false, Watermark = string.IsNullOrEmpty(_svc.Connections.GetSecret(p)) ? "contraseña" : $"•••••••• (guardada en {Os.SecretStoreShort})" };
         var reveal = new ToggleButton { Content = Ui.Icon(MaterialIconKind.EyeOutline, 15), Padding = new Thickness(6, 2), MinHeight = 0, VerticalAlignment = VerticalAlignment.Stretch };
         ToolTip.SetTip(reveal, "Mostrar lo que escribís");
         reveal.IsCheckedChanged += (_, _) => pass.RevealPassword = reveal.IsChecked == true;
@@ -617,9 +618,9 @@ internal sealed class ConnectionsView : UserControl, IPage
             TwoColumns(Ui.Field("Nombre de la aplicación", app, "Algunos sistemas exigen un nombre de app aprobado."), Ui.Field("Productos para el buscador", products, "Se busca el contrato del mes de cada producto (ej. ES → ESZ6).")));
     }
 
-    /// <summary>Campo de secreto: no muestra lo guardado, solo avisa que está en el Llavero.</summary>
+    /// <summary>Campo de secreto: no muestra lo guardado, solo avisa que está en el Llavero (o en Windows).</summary>
     private TextBox SecretBox(ConnectionProfile p, string? name, string watermark) =>
-        new() { PasswordChar = '•', Watermark = string.IsNullOrEmpty(name == null ? _svc.Connections.GetSecret(p) : _svc.Connections.GetSecret(p, name)) ? watermark : "•••••••• (guardado en el Llavero)" };
+        new() { PasswordChar = '•', Watermark = string.IsNullOrEmpty(name == null ? _svc.Connections.GetSecret(p) : _svc.Connections.GetSecret(p, name)) ? watermark : $"•••••••• (guardado en {Os.SecretStoreShort})" };
 
     private static Button Link(string text, string url)
     {
@@ -712,7 +713,7 @@ internal sealed class ConnectionsView : UserControl, IPage
                 if (refresh.Length > 0) _svc.Connections.SetSecret(p, "refresh", refresh);
                 _svc.Connections.Save();
                 _svc.Connections.Invalidate(p);
-                token.Watermark = "•••••••• (guardado en el Llavero)";
+                token.Watermark = $"•••••••• (guardado en {Os.SecretStoreShort})";
                 oauthStatus.Text = "Listo: Trading Hub quedó autorizado. Tocá «Probar conexión».";
             }
             catch (Exception ex)
@@ -743,7 +744,7 @@ internal sealed class ConnectionsView : UserControl, IPage
             Note(MaterialIconKind.InformationOutline, "Gratis con cualquier broker que tenga cTrader (IC Markets, Pepperstone, FxPro, Fusion Markets…) y una cuenta demo: CFDs de índices (US100/NAS100, US500, GER40…), forex, oro y petróleo, con historia tick a tick de años."),
             Ui.H3("1 · Tu aplicación (una sola vez)"),
             Note(MaterialIconKind.ShieldKeyOutline, "Creá una aplicación en openapi.ctrader.com (entrás con tu cTrader ID) y agregá esta dirección de redirección. Después copiá acá el Client ID y el Secret."),
-            Ui.H(8, new TextBlock { Text = redirect, FontFamily = new FontFamily("Menlo, monospace"), VerticalAlignment = VerticalAlignment.Center }, copy, Link("Abrir openapi.ctrader.com", "https://openapi.ctrader.com/apps")),
+            Ui.H(8, new TextBlock { Text = redirect, FontFamily = Ui.MonoFont, VerticalAlignment = VerticalAlignment.Center }, copy, Link("Abrir openapi.ctrader.com", "https://openapi.ctrader.com/apps")),
             TwoColumns(Ui.Field("Client ID", clientId), Ui.Field("Secret", secret)),
             Ui.H3("2 · Autorizar tu cuenta"),
             Ui.H(10, connect, demo),
@@ -795,7 +796,7 @@ internal sealed class ConnectionsView : UserControl, IPage
             practice,
             TwoColumns(Ui.Field("Token", token), Ui.Field("Cuenta", account)),
             Ui.H(16, Link("Crear cuenta de práctica", "https://www.oanda.com/demo-account/"), Link("Generar el token (Manage API Access)", "https://www.oanda.com/demo-account/tpa/personal_token")),
-            Note(MaterialIconKind.ShieldKeyOutline, "El token se guarda en el Llavero. Trading Hub lo usa solo para datos (no manda órdenes a OANDA)."));
+            Note(MaterialIconKind.ShieldKeyOutline, $"El token se guarda en {Os.SecretStore}. Trading Hub lo usa solo para datos (no manda órdenes a OANDA)."));
     }
 
     /// <summary>Alpaca: claves de la cuenta de práctica (historia SIP desde 2016 gratis).</summary>

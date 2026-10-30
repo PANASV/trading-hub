@@ -34,8 +34,8 @@ internal sealed partial class StrategiesView
         try
         {
             var html = ReportExport.Export(_report);
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("open", $"\"{html}\"") { UseShellExecute = false });
-            _status($"Informe exportado: {System.IO.Path.GetFileName(html)} (en el navegador: Archivo → Exportar como PDF)");
+            Windows.Shell.Open(html);
+            _status($"Informe exportado: {System.IO.Path.GetFileName(html)} (en el navegador: {(Os.IsWindows ? "Ctrl+P → Guardar como PDF" : "Archivo → Exportar como PDF")})");
         }
         catch (Exception ex)
         {
@@ -104,10 +104,12 @@ internal sealed partial class StrategiesView
             BoxShadow = BoxShadows.Parse("0 6 28 0 #66000000"),
         };
         var export = Ui.Button("Exportar PDF / HTML", MaterialIconKind.FileExportOutline, ExportReport, "primary");
-        ToolTip.SetTip(export, "Guarda el informe como HTML con los gráficos incluidos y lo abre en el navegador (desde ahí: Archivo → Exportar como PDF o Imprimir)");
-        var finder = Ui.Button("Mostrar en Finder", MaterialIconKind.FolderOutline, () =>
+        ToolTip.SetTip(export, Os.IsWindows
+            ? "Guarda el informe como HTML con los gráficos incluidos y lo abre en el navegador (desde ahí: Ctrl+P → Guardar como PDF, o Imprimir)"
+            : "Guarda el informe como HTML con los gráficos incluidos y lo abre en el navegador (desde ahí: Archivo → Exportar como PDF o Imprimir)");
+        var finder = Ui.Button(Os.IsWindows ? "Mostrar en el Explorador" : "Mostrar en Finder", MaterialIconKind.FolderOutline, () =>
         {
-            if (_report != null) System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("open", $"-R \"{_report.Path}\"") { UseShellExecute = false });
+            if (_report != null) Windows.Shell.Reveal(_report.Path);
         });
         var bar = Ui.H(8, finder, export);
         bar.HorizontalAlignment = HorizontalAlignment.Right;

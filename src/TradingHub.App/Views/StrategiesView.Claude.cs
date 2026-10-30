@@ -72,12 +72,12 @@ internal sealed partial class StrategiesView
         head.Children.Add(title);
 
         _sendButton = Ui.Button("Enviar", MaterialIconKind.Send, () => _ = SendToClaudeAsync(_prompt.Text ?? ""), "primary");
-        ToolTip.SetTip(_sendButton, "⌘Enter");
+        ToolTip.SetTip(_sendButton, Keys.Label("Enter"));
         _stopButton2 = Ui.Button("Detener", MaterialIconKind.Stop, () => _claude.Cancel());
         _stopButton2.IsVisible = false;
         _prompt.KeyDown += (_, e) =>
         {
-            if (e.Key == Key.Enter && e.KeyModifiers.HasFlag(KeyModifiers.Meta))
+            if (e.Key == Key.Enter && e.KeyModifiers.HasFlag(Keys.Command))
             {
                 _ = SendToClaudeAsync(_prompt.Text ?? "");
                 e.Handled = true;
@@ -124,7 +124,7 @@ internal sealed partial class StrategiesView
         _claudeStatus.Text = v != null ? $"Claude Code {v.Replace("(Claude Code)", "").Trim()} · tu suscripción" : "Claude Code no está instalado";
         _sendButton.IsEnabled = v != null;
         if (v == null)
-            AddNote(MaterialIconKind.AlertCircleOutline, "No encontré Claude Code en esta Mac. Instalalo (claude.com/claude-code), iniciá sesión con tu cuenta y volvé a abrir Trading Hub.", Ui.Warn);
+            AddNote(MaterialIconKind.AlertCircleOutline, $"No encontré Claude Code en esta {Os.Device}. Instalalo (claude.com/claude-code), iniciá sesión con tu cuenta y volvé a abrir Trading Hub.", Ui.Warn);
     }
 
     private void ShowSuggestions()
@@ -372,7 +372,7 @@ internal sealed partial class StrategiesView
                 var login = Ui.Button("Iniciar sesión en Claude Code", MaterialIconKind.Login, ClaudeCodeBridge.OpenLoginTerminal, "primary");
                 var card = Ui.Card(Ui.V(8,
                     new TextBlock { Text = "Claude Code necesita que inicies sesión", FontWeight = FontWeight.SemiBold },
-                    new TextBlock { Text = "Se abre la Terminal con Claude Code: elegí tu cuenta de Claude (suscripción) y seguí los pasos en el navegador. Después volvé acá y repetí el pedido.", Classes = { "muted", "small" }, TextWrapping = TextWrapping.Wrap },
+                    new TextBlock { Text = (Os.IsWindows ? "Se abre una ventana de comandos" : "Se abre la Terminal") + " con Claude Code: elegí tu cuenta de Claude (suscripción) y seguí los pasos en el navegador. Después volvé acá y repetí el pedido.", Classes = { "muted", "small" }, TextWrapping = TextWrapping.Wrap },
                     login), 12);
                 _chat.Children.Add(card);
             }

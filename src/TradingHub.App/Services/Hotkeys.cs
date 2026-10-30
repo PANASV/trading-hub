@@ -55,24 +55,21 @@ public static class Hotkeys
     public static string? GestureOf(AppSettings s, string id) =>
         s.Hotkeys.TryGetValue(id, out var g) ? (string.IsNullOrEmpty(g) ? null : g) : All.FirstOrDefault(h => h.Id == id)?.DefaultGesture;
 
-    /// <summary>Texto lindo para mostrar un atajo (⌥1, ⇧B, F5…).</summary>
-    public static string Pretty(string? gesture)
+    /// <summary>Texto lindo para mostrar un atajo (⌥1, ⇧B, F5… en la Mac; Alt+1, Shift+B, F5… en Windows).</summary>
+    public static string Pretty(string? gesture) => Pretty(gesture, mac: !Os.IsWindows);
+
+    internal static string Pretty(string? gesture, bool mac)
     {
         if (string.IsNullOrEmpty(gesture)) return "—";
         try
         {
             var g = KeyGesture.Parse(gesture);
-            var parts = new List<string>();
-            if (g.KeyModifiers.HasFlag(KeyModifiers.Control)) parts.Add("⌃");
-            if (g.KeyModifiers.HasFlag(KeyModifiers.Alt)) parts.Add("⌥");
-            if (g.KeyModifiers.HasFlag(KeyModifiers.Shift)) parts.Add("⇧");
-            if (g.KeyModifiers.HasFlag(KeyModifiers.Meta)) parts.Add("⌘");
             string key = g.Key switch
             {
                 >= Key.D0 and <= Key.D9 => ((int)(g.Key - Key.D0)).ToString(),
                 >= Key.NumPad0 and <= Key.NumPad9 => "Num " + (int)(g.Key - Key.NumPad0),
                 Key.Space => "Espacio",
-                Key.Return => "↩",
+                Key.Return => mac ? "↩" : "Enter",
                 Key.Tab => "Tab",
                 Key.Up => "↑",
                 Key.Down => "↓",
@@ -80,7 +77,7 @@ public static class Hotkeys
                 Key.Right => "→",
                 _ => g.Key.ToString(),
             };
-            return string.Concat(parts) + key;
+            return Keys.Format(g.KeyModifiers, key, mac);
         }
         catch
         {

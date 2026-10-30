@@ -141,8 +141,8 @@ public sealed partial class TradingView : UserControl
         _layoutChoice = new ChoiceButton<PaneLayout>(MaterialIconKind.ViewGridOutline, Layouts.Select(l => (l.Layout, l.Label)),
             "Diseño: cuántos gráficos ver a la vez en esta pestaña", l => Layouts.First(x => x.Layout == l).Short);
         _layoutChoice.Changed += l => _ = SetLayoutAsync(l);
-        var popOut = Ui.IconButton(MaterialIconKind.OpenInNew, "Sacar el gráfico a una ventana aparte (⇧⌘D)", () => DetachActive());
-        var newTab = Ui.IconButton(MaterialIconKind.Plus, "Nueva pestaña (⌘T)", () => _ = NewChartAsync());
+        var popOut = Ui.IconButton(MaterialIconKind.OpenInNew, $"Sacar el gráfico a una ventana aparte ({Keys.Label("D", shift: true)})", () => DetachActive());
+        var newTab = Ui.IconButton(MaterialIconKind.Plus, $"Nueva pestaña ({Keys.Label("T")})", () => _ = NewChartAsync());
         _toolbar = new ChartToolbar(this, false, Ui.Divider(true), _layoutChoice, BuildPanelsButton(), popOut, newTab);
         _svc.BracketsCreated += HookBrackets;
         Content = BuildLayout();
@@ -1432,19 +1432,47 @@ public sealed partial class TradingView : UserControl
     }
 }
 
-/// <summary>Sonido de alerta del sistema.</summary>
+/// <summary>
+/// Sonido de alerta del sistema: Glass de macOS (un .aiff, con afplay) o, en Windows, el sonido de notificación que tenga
+/// elegido el usuario (PlaySound de winmm con el evento del sistema; con un .wav propio, ese archivo).
+/// </summary>
 internal static class Sound
 {
-    public static void Play(string file = "/System/Library/Sounds/Glass.aiff")
+    private const string MacAlert = "/System/Library/Sounds/Glass.aiff";
+
+    public static void Play(string? file = null)
     {
         if (App.Services?.Settings.SoundAlerts == false) return;
         try
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("afplay", file) { UseShellExecute = false });
+            if (OperatingSystem.IsWindows()) PlayWindows(file);
+            else System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("afplay", file ?? MacAlert) { UseShellExecute = false });
         }
         catch
         {
             // sin sonido
         }
     }
+
+    private const uint SndAsync = 0x0001;
+    private const uint SndNoDefault = 0x0002;
+    private const uint SndAlias = 0x00010000;
+    private const uint SndFilename = 0x00020000;
+
+    /// <summary>El evento de sonido de Windows para las notificaciones («Notificación» en la configuración de sonido).</summary>
+    internal const string WindowsAlertEvent = "Notification.Default";
+
+    [System.Runtime.InteropServices.DllImport("winmm.dll", EntryPoint = "PlaySoundW", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool PlaySound(string? sound, IntPtr module, uint flags);
+
+    /// <summary>Sin esperar a que termine. Si el evento no tiene sonido, Windows toca el suyo por defecto.</summary>
+    private static void PlayWindows(string? file)
+    {
+        if (file != null && file.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) && File.Exists(file)) PlaySound(file, IntPtr.Zero, SndFilename | SndAsync | SndNoDefault);
+        else PlaySound(WindowsAlertEvent, IntPtr.Zero, SndAlias | SndAsync);
+    }
+
+    /// <summary>Para las pruebas en Windows: pide un evento que no existe y sin sonido por defecto (no suena nada).</summary>
+    internal static bool ProbeWindows() => PlaySound("TradingHub.Prueba.NoExiste", IntPtr.Zero, SndAlias | SndAsync | SndNoDefault);
 }

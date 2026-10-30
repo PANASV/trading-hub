@@ -1,5 +1,9 @@
 # Portar Trading Hub a Windows con Claude
 
+> **Ya está hecho:** desde la versión 1.1.0 Trading Hub corre en Windows 10 y 11 con un instalador
+> ([descargalo acá](https://github.com/ralphtradesz/trading-hub/releases/latest)). Esta guía queda como referencia de
+> qué depende de cada sistema operativo y cómo se armó el porte (sirve también para llevarla a Linux).
+
 Trading Hub está hecho en C#/.NET 10 con Avalonia y SkiaSharp, que funcionan igual en Windows. La mayor parte del
 código (datos, feeds, gráficos, backtesting, estrategias, indicadores) no depende del sistema operativo. Lo que sí es
 propio de macOS está en pocos lugares bien identificados, y esta guía te deja todo listo para que **Claude Code** haga

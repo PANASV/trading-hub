@@ -120,7 +120,7 @@ public sealed partial class TradingView
                 Ui.H3("Operar con el DOM"),
                 Ui.Text("Clic en Bid: compra límite (o stop si es encima del precio)."),
                 Ui.Text("Clic en Ask: venta límite (o stop si es debajo del precio)."),
-                Ui.Text("Clic derecho o ⌥ clic: cancela las órdenes de ese precio."),
+                Ui.Text(Os.IsWindows ? "Clic derecho o Alt+clic: cancela las órdenes de ese precio." : "Clic derecho o ⌥ clic: cancela las órdenes de ese precio."),
                 Ui.Text("Arrastrá una orden propia para moverla."),
                 Ui.Text("Rueda: desplazar · botón de centrar: volver al precio."),
                 Ui.Faint("En Configurar DOM elegís columnas, tamaños, colores y si hace falta doble clic.")).Also(v => v.Margin = new Thickness(12)),

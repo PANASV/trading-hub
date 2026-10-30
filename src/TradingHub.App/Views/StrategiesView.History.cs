@@ -269,7 +269,7 @@ internal sealed class CodeViewerWindow : Window
             if (GetTopLevel(this)?.Clipboard is { } cb) _ = cb.SetTextAsync(code);
             done.Text = "Copiado";
         }, "ghost"));
-        if (path != null) actions.Children.Add(Ui.Button("Mostrar en el Finder", MaterialIconKind.FolderSearchOutline, () => Shell.Reveal(path), "ghost"));
+        if (path != null) actions.Children.Add(Ui.Button(Os.IsWindows ? "Mostrar en el Explorador" : "Mostrar en el Finder", MaterialIconKind.FolderSearchOutline, () => Shell.Reveal(path), "ghost"));
         if (openInBacktesting != null) actions.Children.Add(Ui.Button("Abrir en Backtesting", MaterialIconKind.FlaskOutline, openInBacktesting));
         var name = new TextBlock
         {

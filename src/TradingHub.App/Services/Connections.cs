@@ -13,27 +13,37 @@ using TradingHub.Trading;
 
 namespace TradingHub.App.Services;
 
+/// <summary>Dónde se guardan los secretos de las conexiones (una entrada por cuenta; vacío = no hay).</summary>
+public interface ISecretStore
+{
+    string Get(string account);
+
+    /// <summary>Guarda el secreto; null o vacío lo borra.</summary>
+    void Set(string account, string? secret);
+}
+
 /// <summary>
-/// Guarda secretos (contraseñas, API secrets) en el llavero de macOS. Las herramientas de prueba ponen
-/// TRADINGHUB_KEYCHAIN_FILE y usan un archivo propio con datos de mentira: nunca leen el llavero real.
+/// Guarda secretos (contraseñas, API secrets) en el llavero de macOS o, en Windows, en el Administrador de credenciales.
+/// Las herramientas de prueba ponen TRADINGHUB_KEYCHAIN_FILE y usan un archivo propio con datos de mentira: nunca leen
+/// el llavero real.
 /// </summary>
 public static class Keychain
 {
     private const string Service = "Trading Hub";
-    private static readonly string? IsolatedFile = Environment.GetEnvironmentVariable("TRADINGHUB_KEYCHAIN_FILE") is { Length: > 0 } f ? f : null;
 
-    private static Dictionary<string, string> LoadIsolated()
-    {
-        try
-        {
-            return File.Exists(IsolatedFile) ? JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(IsolatedFile!)) ?? new() : new();
-        }
-        catch
-        {
-            return new();
-        }
-    }
+    /// <summary>El de esta plataforma, o el archivo de prueba si está TRADINGHUB_KEYCHAIN_FILE.</summary>
+    internal static ISecretStore Store { get; } = Environment.GetEnvironmentVariable("TRADINGHUB_KEYCHAIN_FILE") is { Length: > 0 } f
+        ? new FileSecretStore(f)
+        : OperatingSystem.IsWindows() ? new WindowsCredentialStore(Service) : new MacKeychainStore(Service);
 
+    public static void Set(string account, string? secret) => Store.Set(account, secret);
+
+    public static string Get(string account) => Store.Get(account);
+}
+
+/// <summary>El llavero de macOS, con /usr/bin/security.</summary>
+internal sealed class MacKeychainStore(string service) : ISecretStore
+{
     private static string Run(params string[] args)
     {
         var psi = new ProcessStartInfo("/usr/bin/security") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
@@ -44,30 +54,44 @@ public static class Keychain
         return p.ExitCode == 0 ? output.TrimEnd('\n') : "";
     }
 
-    public static void Set(string account, string? secret)
+    public void Set(string account, string? secret)
     {
-        if (IsolatedFile != null)
-        {
-            var all = LoadIsolated();
-            if (string.IsNullOrEmpty(secret)) all.Remove(account);
-            else all[account] = secret;
-            File.WriteAllText(IsolatedFile, JsonSerializer.Serialize(all));
-            return;
-        }
-
         if (string.IsNullOrEmpty(secret))
         {
-            Run("delete-generic-password", "-s", Service, "-a", account);
+            Run("delete-generic-password", "-s", service, "-a", account);
             return;
         }
 
-        Run("add-generic-password", "-U", "-s", Service, "-a", account, "-w", secret);
+        Run("add-generic-password", "-U", "-s", service, "-a", account, "-w", secret);
     }
 
-    public static string Get(string account) =>
-        IsolatedFile != null
-            ? LoadIsolated().GetValueOrDefault(account, "")
-            : Run("find-generic-password", "-s", Service, "-a", account, "-w");
+    public string Get(string account) => Run("find-generic-password", "-s", service, "-a", account, "-w");
+}
+
+/// <summary>Secretos de mentira en un archivo JSON (TRADINGHUB_KEYCHAIN_FILE): lo usan las pruebas y las herramientas.</summary>
+internal sealed class FileSecretStore(string path) : ISecretStore
+{
+    private Dictionary<string, string> Load()
+    {
+        try
+        {
+            return File.Exists(path) ? JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(path)) ?? new() : new();
+        }
+        catch
+        {
+            return new();
+        }
+    }
+
+    public void Set(string account, string? secret)
+    {
+        var all = Load();
+        if (string.IsNullOrEmpty(secret)) all.Remove(account);
+        else all[account] = secret;
+        File.WriteAllText(path, JsonSerializer.Serialize(all));
+    }
+
+    public string Get(string account) => Load().GetValueOrDefault(account, "");
 }
 
 public enum ConnectionKind

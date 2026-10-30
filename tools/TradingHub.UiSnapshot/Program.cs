@@ -84,7 +84,8 @@ if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("TRADINGHUB_INDICATO
         foreach (var f in Directory.EnumerateFiles(realIndicators, "*.cs", SearchOption.AllDirectories))
         {
             var rel = Path.GetRelativePath(realIndicators, f);
-            if (rel.Contains("/bin/") || rel.Contains("/obj/")) continue;
+            var unixRel = rel.Replace(Path.DirectorySeparatorChar, '/'); // en Windows las carpetas van con «\»
+            if (unixRel.Contains("/bin/") || unixRel.Contains("/obj/")) continue;
             var dst = Path.Combine(snapIndicators, rel);
             Directory.CreateDirectory(Path.GetDirectoryName(dst)!);
             File.Copy(f, dst);

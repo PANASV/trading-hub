@@ -21,6 +21,9 @@ internal static class Program
             e.SetObserved();
         };
 
+        // Windows: si ya hay una Trading Hub abierta con estos datos, se muestra esa y esta no arranca (en la Mac lo hace el sistema)
+        if (!Services.SingleInstance.Claim(Services.AppPaths.Root)) return;
+
         WaitForDisplay();
         try
         {
@@ -46,7 +49,7 @@ internal static class Program
 
     /// <summary>
     /// Con la pantalla apagada o bloqueada macOS no tiene pantalla activa y Avalonia no puede arrancar el dibujo
-    /// (error -6661): en vez de cerrarse, Trading Hub espera a que vuelva la pantalla y ahí abre.
+    /// (error -6661): en vez de cerrarse, Trading Hub espera a que vuelva la pantalla y ahí abre. En Windows no hace falta.
     /// </summary>
     private static void WaitForDisplay()
     {

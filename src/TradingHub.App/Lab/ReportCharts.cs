@@ -20,7 +20,7 @@ internal static class ReportCharts
     };
 
     private static readonly CultureInfo Es = CultureInfo.GetCultureInfo("es-AR");
-    private static SKTypeface Face(bool bold = false) => SKTypeface.FromFamilyName("Helvetica Neue", bold ? SKFontStyle.Bold : SKFontStyle.Normal) ?? SKTypeface.Default;
+    private static SKTypeface Face(bool bold = false) => SKTypeface.FromFamilyName(TradingHub.Common.PlatformFonts.SansSkia, bold ? SKFontStyle.Bold : SKFontStyle.Normal) ?? SKTypeface.Default;
 
     private static string Compact(double v)
     {

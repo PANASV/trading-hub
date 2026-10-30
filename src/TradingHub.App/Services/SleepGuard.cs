@@ -10,6 +10,8 @@ namespace TradingHub.App.Services;
 /// pide tu contraseña de administrador una vez por sesión de Trading Hub y deja la Mac sin dormir (pmset disablesleep) solo
 /// mientras Trading Hub esté abierta. Se deshace solo al cerrar Trading Hub, aunque se cierre de golpe, y opcionalmente solo con el
 /// cargador conectado.
+/// En Windows es lo mismo con SetThreadExecutionState (la PC no se suspende por inactividad); con la tapa cerrada manda la
+/// configuración de energía de Windows, así que esa opción no está.
 /// </summary>
 internal sealed class SleepGuard : IDisposable
 {
@@ -29,6 +31,20 @@ internal sealed class SleepGuard : IDisposable
 
     [DllImport(CoreFoundation)]
     private static extern void CFRelease(IntPtr cf);
+
+    // Windows: el estado queda pedido hasta el próximo llamado con ES_CONTINUOUS (o hasta que termine el hilo). Update
+    // corre siempre en el hilo de la interfaz, así que se pide y se suelta desde el mismo hilo.
+    private const uint EsContinuous = 0x80000000;
+    private const uint EsSystemRequired = 0x00000001;
+
+    [DllImport("kernel32.dll")]
+    private static extern uint SetThreadExecutionState(uint flags);
+
+    /// <summary>Para las pruebas en Windows: pide y suelta el estado (devuelve si el sistema lo aceptó).</summary>
+    internal static bool ProbeWindowsExecutionState() => SetThreadExecutionState(EsContinuous | EsSystemRequired) != 0 && SetThreadExecutionState(EsContinuous) != 0;
+
+    /// <summary>«Seguir con la tapa cerrada» existe solo en la Mac (en Windows lo decide la configuración de energía).</summary>
+    public static bool SupportsLidClosed => OperatingSystem.IsMacOS();
 
     private uint _assertion;
     private bool _held;
@@ -71,6 +87,7 @@ internal sealed class SleepGuard : IDisposable
         if (needed && !_held) Hold(reason!);
         else if (!needed && _held) Release();
         Reason = needed ? reason : null;
+        if (!SupportsLidClosed) return;
 
         // tapa cerrada: se arranca recién cuando hay algo que lo necesita y se mantiene mientras esté activado
         try
@@ -89,10 +106,25 @@ internal sealed class SleepGuard : IDisposable
 
     private void Hold(string reason)
     {
-        if (!OperatingSystem.IsMacOS()) return;
+        if (!OperatingSystem.IsMacOS() && !OperatingSystem.IsWindows()) return;
         if (Sandboxed)
         {
             _held = true; // en pruebas: se simula
+            return;
+        }
+
+        if (OperatingSystem.IsWindows())
+        {
+            try
+            {
+                // la PC no se suspende por inactividad (la pantalla sí se puede apagar), como la aserción de macOS
+                _held = SetThreadExecutionState(EsContinuous | EsSystemRequired) != 0;
+            }
+            catch (Exception ex)
+            {
+                CrashLog.Write(ex);
+            }
+
             return;
         }
 
@@ -125,7 +157,8 @@ internal sealed class SleepGuard : IDisposable
 
         try
         {
-            IOPMAssertionRelease(_assertion);
+            if (OperatingSystem.IsWindows()) SetThreadExecutionState(EsContinuous);
+            else IOPMAssertionRelease(_assertion);
         }
         catch (Exception ex)
         {
@@ -204,6 +237,7 @@ internal sealed class SleepGuard : IDisposable
     /// <summary>¿macOS tiene el «no dormir» puesto ahora? (lo puede leer cualquiera)</summary>
     public static bool SystemSleepDisabled()
     {
+        if (!OperatingSystem.IsMacOS()) return false;
         try
         {
             var psi = new ProcessStartInfo("/usr/bin/pmset", "-g") { RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true };

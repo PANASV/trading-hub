@@ -19,8 +19,8 @@ namespace TradingHub.App.Windows;
 internal sealed record Page(string Id, string Title, MaterialIconKind Icon, Func<Control> Create, KeyGesture? Gesture);
 
 /// <summary>
-/// Ventana principal: barra superior propia (integrada con los botones de macOS), barra lateral
-/// de navegación, páginas y barra de estado.
+/// Ventana principal: barra superior propia (integrada con los botones de macOS, o con los de Windows a la derecha),
+/// barra lateral de navegación, páginas y barra de estado.
 /// </summary>
 public sealed class MainWindow : Window
 {
@@ -62,17 +62,18 @@ public sealed class MainWindow : Window
         svc.Live.Notice += text => Dispatcher.UIThread.Post(() => SetStatus(text));
         _pageDefs = new List<Page>
         {
-            new("trading", "Trading", MaterialIconKind.ChartBoxOutline, () => Trading, new KeyGesture(Key.D1, KeyModifiers.Meta)),
-            new("accounts", "Cuenta", MaterialIconKind.WalletOutline, () => new AccountsView(svc, SetStatus, this), new KeyGesture(Key.D5, KeyModifiers.Meta)),
-            new("strategies", "Backtesting", MaterialIconKind.FlaskOutline, () => new StrategiesView(svc, SetStatus), new KeyGesture(Key.D2, KeyModifiers.Meta)),
-            new("live", "En vivo", MaterialIconKind.AccessPoint, () => new LiveView(svc, SetStatus, this), new KeyGesture(Key.D7, KeyModifiers.Meta)),
-            new("data", "Datos", MaterialIconKind.DatabaseOutline, () => new DataView(svc, SetStatus, this), new KeyGesture(Key.D3, KeyModifiers.Meta)),
-            new("connections", "Conexiones", MaterialIconKind.LanConnect, () => new ConnectionsView(svc, SetStatus), new KeyGesture(Key.D4, KeyModifiers.Meta)),
-            new("settings", "Ajustes", MaterialIconKind.CogOutline, () => new SettingsView(svc, SetStatus), new KeyGesture(Key.OemComma, KeyModifiers.Meta)),
+            new("trading", "Trading", MaterialIconKind.ChartBoxOutline, () => Trading, new KeyGesture(Key.D1, Keys.Command)),
+            new("accounts", "Cuenta", MaterialIconKind.WalletOutline, () => new AccountsView(svc, SetStatus, this), new KeyGesture(Key.D5, Keys.Command)),
+            new("strategies", "Backtesting", MaterialIconKind.FlaskOutline, () => new StrategiesView(svc, SetStatus), new KeyGesture(Key.D2, Keys.Command)),
+            new("live", "En vivo", MaterialIconKind.AccessPoint, () => new LiveView(svc, SetStatus, this), new KeyGesture(Key.D7, Keys.Command)),
+            new("data", "Datos", MaterialIconKind.DatabaseOutline, () => new DataView(svc, SetStatus, this), new KeyGesture(Key.D3, Keys.Command)),
+            new("connections", "Conexiones", MaterialIconKind.LanConnect, () => new ConnectionsView(svc, SetStatus), new KeyGesture(Key.D4, Keys.Command)),
+            new("settings", "Ajustes", MaterialIconKind.CogOutline, () => new SettingsView(svc, SetStatus), new KeyGesture(Key.OemComma, Keys.Command)),
         };
 
         Content = BuildLayout();
         BuildMenu();
+        if (Os.IsWindows) SetUpWindows();
         Navigate("trading");
 
         _svc.Scripts = new UserScripts(_svc.Catalog);
@@ -91,6 +92,7 @@ public sealed class MainWindow : Window
 
         Opened += async (_, _) =>
         {
+            FitToScreen();
             await Trading.RestoreOrDefaultAsync();
             // y las tuyas en vivo, si así está en Ajustes (unos segundos después: las conexiones ya arrancaron)
             _ = Task.Delay(TimeSpan.FromSeconds(8)).ContinueWith(_ => Dispatcher.UIThread.Post(async () =>
@@ -130,7 +132,7 @@ public sealed class MainWindow : Window
 
             _svc.Settings.Save();
             // la cruz roja no cierra Trading Hub: queda en la barra de menú, con las estrategias y los agentes trabajando
-            // (⌘Q o «Salir de Trading Hub» del panel sí la cierran del todo)
+            // (⌘Q o «Salir de Trading Hub» del panel sí la cierran del todo). En Windows, igual con la bandeja y Alt+F4.
             if (e.CloseReason == WindowCloseReason.WindowClosing && _svc.Settings.KeepInMenuBar && MenuBar.Current != null)
             {
                 e.Cancel = true;
@@ -178,7 +180,36 @@ public sealed class MainWindow : Window
     }
 
     /// <summary>Alto de la barra de arriba: el de la barra de título gruesa de macOS (los botones de la ventana van centrados ahí).</summary>
+    /// <summary>
+    /// En Windows, una ventana más grande que la pantalla (una notebook de 1366×768, o la escala de Windows al 150 %)
+    /// arranca con la barra de arriba afuera y no se puede mover: se achica a lo que entra, centrada, y si ni el tamaño
+    /// mínimo entra, arranca maximizada. macOS ya la acomoda solo.
+    /// </summary>
+    private void FitToScreen()
+    {
+        if (!Os.IsWindows || WindowState != WindowState.Normal || Screens.ScreenFromWindow(this) is not { } screen) return;
+        var area = screen.WorkingArea;
+        double scale = screen.Scaling > 0 ? screen.Scaling : 1;
+        double w = area.Width / scale, h = area.Height / scale;
+        if (Width <= w && Height <= h && Position.Y >= area.Y) return;
+        if (w < MinWidth || h < MinHeight)
+        {
+            WindowState = WindowState.Maximized;
+            return;
+        }
+
+        Width = Math.Min(Width, w);
+        Height = Math.Min(Height, h);
+        Position = new PixelPoint(area.X + (int)((area.Width - Width * scale) / 2), area.Y + (int)((area.Height - Height * scale) / 2));
+    }
+
     private const double TopBarHeight = 52;
+
+    /// <summary>
+    /// Ancho de los botones de la ventana en Windows: los dibuja Avalonia (tema Fluent) arriba a la derecha, tres de 45
+    /// con 2 de separación.
+    /// </summary>
+    private const double WindowsCaptionButtonsWidth = 3 * 45 + 2 * 2;
 
     private Control BuildTopBar()
     {
@@ -201,10 +232,6 @@ public sealed class MainWindow : Window
         var left = Ui.H(18, nav);
         void PlaceNav() => left.Margin = new Thickness(OperatingSystem.IsMacOS() && WindowState != WindowState.FullScreen ? 82 : 10, 0, 0, 0);
         PlaceNav();
-        PropertyChanged += (_, e) =>
-        {
-            if (e.Property == WindowStateProperty) PlaceNav();
-        };
         // con la ventana angosta la barra queda solo con íconos (el nombre sigue en el tooltip)
         SizeChanged += (_, e) =>
         {
@@ -256,7 +283,15 @@ public sealed class MainWindow : Window
             InvalidateVisual();
         };
         var right = Ui.H(12, pnl, themeButton, conn);
-        right.Margin = new Thickness(0, 0, 14, 0);
+        // en Windows los botones de la ventana (minimizar, maximizar y cerrar) van arriba a la derecha: se les deja su lugar
+        void PlaceRight() => right.Margin = new Thickness(0, 0, 14 + (Os.IsWindows && WindowState != WindowState.FullScreen ? WindowsCaptionButtonsWidth : 0), 0);
+        PlaceRight();
+        PropertyChanged += (_, e) =>
+        {
+            if (e.Property != WindowStateProperty) return;
+            PlaceNav();
+            PlaceRight();
+        };
 
         var bar = new DockPanel { Height = TopBarHeight, LastChildFill = false };
         DockPanel.SetDock(right, Dock.Right);
@@ -282,7 +317,7 @@ public sealed class MainWindow : Window
             Key.OemComma => ",",
             _ => g.Key.ToString(),
         };
-        return (g.KeyModifiers.HasFlag(KeyModifiers.Shift) ? "⇧" : "") + (g.KeyModifiers.HasFlag(KeyModifiers.Meta) ? "⌘" : "") + key;
+        return Keys.Format(g.KeyModifiers, key, mac: !Os.IsWindows);
     }
 
     private Control BuildStatusBar()
@@ -334,25 +369,25 @@ public sealed class MainWindow : Window
         {
             Navigate("trading");
             _ = Trading.NewChartAsync();
-        }, new KeyGesture(Key.T, KeyModifiers.Meta)));
-        file.Menu.Add(Item("Cerrar gráfico", Trading.CloseActiveTab, new KeyGesture(Key.W, KeyModifiers.Meta)));
+        }, new KeyGesture(Key.T, Keys.Command)));
+        file.Menu.Add(Item("Cerrar gráfico", Trading.CloseActiveTab, new KeyGesture(Key.W, Keys.Command)));
         file.Menu.Add(Item("Buscar instrumento…", () =>
         {
             Navigate("trading");
             Trading.Picker.Open();
-        }, new KeyGesture(Key.K, KeyModifiers.Meta)));
+        }, new KeyGesture(Key.K, Keys.Command)));
         file.Menu.Add(new NativeMenuItemSeparator());
         file.Menu.Add(Item("Guardar espacio de trabajo", () =>
         {
             Workspace.Save(Trading);
             SetStatus("Espacio de trabajo guardado");
-        }, new KeyGesture(Key.S, KeyModifiers.Meta)));
+        }, new KeyGesture(Key.S, Keys.Command)));
         file.Menu.Add(Item("Abrir carpeta de datos", () => Shell.OpenFolder(AppPaths.Root)));
         menu.Add(file);
 
         var chart = new NativeMenuItem("Gráfico") { Menu = new NativeMenu() };
-        chart.Menu.Add(Item("Indicadores…", Trading.OpenIndicators, new KeyGesture(Key.I, KeyModifiers.Meta)));
-        chart.Menu.Add(Item("Editar footprint…", Trading.OpenFootprintEditor, new KeyGesture(Key.F, KeyModifiers.Meta | KeyModifiers.Shift)));
+        chart.Menu.Add(Item("Indicadores…", Trading.OpenIndicators, new KeyGesture(Key.I, Keys.Command)));
+        chart.Menu.Add(Item("Editar footprint…", Trading.OpenFootprintEditor, new KeyGesture(Key.F, Keys.Command | KeyModifiers.Shift)));
         chart.Menu.Add(Item("Escala automática", () =>
         {
             if (Trading.ActiveTab?.Model is { } m)
@@ -360,7 +395,7 @@ public sealed class MainWindow : Window
                 m.Viewport.AutoScale = true;
                 m.Invalidate();
             }
-        }, new KeyGesture(Key.A, KeyModifiers.Meta | KeyModifiers.Alt)));
+        }, new KeyGesture(Key.A, Keys.Command | KeyModifiers.Alt)));
         chart.Menu.Add(Item("Ir al último precio", () =>
         {
             if (Trading.ActiveTab?.Model is { } m)
@@ -368,7 +403,7 @@ public sealed class MainWindow : Window
                 m.Viewport.ScrollBars = 0;
                 m.Invalidate();
             }
-        }, new KeyGesture(Key.End, KeyModifiers.Meta)));
+        }, new KeyGesture(Key.End, Keys.Command)));
         chart.Menu.Add(new NativeMenuItemSeparator());
         var layouts = new NativeMenuItem("Diseño") { Menu = new NativeMenu() };
         foreach (var (layout, label, _) in TradingView.Layouts)
@@ -382,7 +417,7 @@ public sealed class MainWindow : Window
         {
             Navigate("trading");
             Trading.DetachActive();
-        }, new KeyGesture(Key.D, KeyModifiers.Meta | KeyModifiers.Shift)));
+        }, new KeyGesture(Key.D, Keys.Command | KeyModifiers.Shift)));
         chart.Menu.Add(new NativeMenuItemSeparator());
         var panels = new NativeMenuItem("Paneles") { Menu = new NativeMenu() };
         foreach (var (key, label) in new[] { ("side", "Panel derecho"), ("ticket", "Ticket"), ("dom", "DOM"), ("tape", "Cinta de operaciones") })
@@ -400,7 +435,7 @@ public sealed class MainWindow : Window
         menu.Add(go);
 
         var code = new NativeMenuItem("Código") { Menu = new NativeMenu() };
-        code.Menu.Add(Item("Editor de indicadores…", () => new CodeEditorWindow(_svc, CodeKind.Indicator).Show(this), new KeyGesture(Key.E, KeyModifiers.Meta | KeyModifiers.Shift)));
+        code.Menu.Add(Item("Editor de indicadores…", () => new CodeEditorWindow(_svc, CodeKind.Indicator).Show(this), new KeyGesture(Key.E, Keys.Command | KeyModifiers.Shift)));
         code.Menu.Add(Item("Abrir carpeta de indicadores", () => Shell.OpenFolder(AppPaths.UserIndicators)));
         code.Menu.Add(Item("Recompilar indicadores", () => _svc.Scripts?.CompileAll()));
         code.Menu.Add(new NativeMenuItemSeparator());
@@ -412,12 +447,39 @@ public sealed class MainWindow : Window
         NativeMenu.SetMenu(this, menu);
     }
 
-    private static NativeMenuItem Item(string header, Action onClick, KeyGesture? gesture = null)
+    /// <summary>Los atajos del menú (en Windows no hay barra de menú: se registran en la ventana).</summary>
+    private readonly List<(KeyGesture Gesture, Action Run)> _menuShortcuts = new();
+
+    private NativeMenuItem Item(string header, Action onClick, KeyGesture? gesture = null)
     {
         var item = new NativeMenuItem(header);
-        if (gesture != null) item.Gesture = gesture;
+        if (gesture != null)
+        {
+            item.Gesture = gesture;
+            _menuShortcuts.Add((gesture, onClick));
+        }
+
         item.Click += (_, _) => onClick();
         return item;
+    }
+
+    // ===================================================================== Windows
+
+    /// <summary>
+    /// Windows no muestra el menú de la app (es de la barra de menú de la Mac): sus atajos, con Ctrl, quedan en la ventana.
+    /// Alt+F4 sale de Trading Hub del todo, como ⌘Q en la Mac (la cruz solo la manda a la bandeja del sistema, si está
+    /// activado en Ajustes). Maximizada, Windows deja el borde de la ventana fuera de la pantalla: el contenido se corre
+    /// para que la barra de arriba no quede cortada.
+    /// </summary>
+    private void SetUpWindows()
+    {
+        foreach (var (gesture, run) in _menuShortcuts)
+            KeyBindings.Add(new KeyBinding { Gesture = gesture, Command = new Relay(run) });
+        KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.F4, KeyModifiers.Alt), Command = new Relay(MenuBar.Quit) });
+        PropertyChanged += (_, e) =>
+        {
+            if (e.Property == OffScreenMarginProperty && Content is Control root) root.Margin = OffScreenMargin;
+        };
     }
 
     // ===================================================================== estado
@@ -580,7 +642,10 @@ internal interface IPage
     void OnTimer();
 }
 
-/// <summary>Utilidades para abrir carpetas y archivos con el sistema.</summary>
+/// <summary>
+/// Utilidades para abrir carpetas y archivos con el sistema: con «open» en la Mac y, en Windows, con el programa que
+/// tenga asociado (UseShellExecute) o con el Explorador de archivos.
+/// </summary>
 internal static class Shell
 {
     public static void OpenFolder(string path)
@@ -588,7 +653,8 @@ internal static class Shell
         try
         {
             Directory.CreateDirectory(path);
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("open", $"\"{path}\"") { UseShellExecute = false });
+            if (OperatingSystem.IsWindows()) StartWithShell(path);
+            else System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("open", $"\"{path}\"") { UseShellExecute = false });
         }
         catch
         {
@@ -601,6 +667,12 @@ internal static class Shell
     {
         try
         {
+            if (OperatingSystem.IsWindows())
+            {
+                StartWithShell(url);
+                return;
+            }
+
             var psi = new System.Diagnostics.ProcessStartInfo("open") { UseShellExecute = false };
             psi.ArgumentList.Add(url);
             System.Diagnostics.Process.Start(psi);
@@ -611,11 +683,17 @@ internal static class Shell
         }
     }
 
-    /// <summary>Muestra el archivo seleccionado en el Finder.</summary>
+    /// <summary>Muestra el archivo seleccionado en el Finder (en Windows, en el Explorador de archivos).</summary>
     public static void Reveal(string path)
     {
         try
         {
+            if (OperatingSystem.IsWindows())
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", RevealArguments(Path.GetFullPath(path))) { UseShellExecute = false })?.Dispose();
+                return;
+            }
+
             var psi = new System.Diagnostics.ProcessStartInfo("open") { UseShellExecute = false };
             psi.ArgumentList.Add("-R");
             psi.ArgumentList.Add(path);
@@ -631,7 +709,31 @@ internal static class Shell
     {
         try
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("open", $"\"{pathOrUrl}\"") { UseShellExecute = false });
+            if (OperatingSystem.IsWindows()) StartWithShell(pathOrUrl);
+            else System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("open", $"\"{pathOrUrl}\"") { UseShellExecute = false });
+        }
+        catch
+        {
+            // ignorar
+        }
+    }
+
+    /// <summary>
+    /// Lo que entiende explorer.exe para abrir la carpeta con el archivo marcado: «/select,"C:\ruta\archivo"» (pegado a la
+    /// coma y entre comillas; en Windows una ruta no puede tener comillas).
+    /// </summary>
+    internal static string RevealArguments(string fullPath) => $"/select,\"{fullPath}\"";
+
+    /// <summary>Windows: lo abre con el programa asociado (carpetas en el Explorador, direcciones en el navegador).</summary>
+    private static void StartWithShell(string target) =>
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(target) { UseShellExecute = true })?.Dispose();
+
+    /// <summary>Windows: las opciones de energía donde se elige qué hace la PC al cerrar la tapa.</summary>
+    public static void OpenWindowsPowerOptions()
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("control.exe", "/name Microsoft.PowerOptions /page pageGlobalSettings") { UseShellExecute = true })?.Dispose();
         }
         catch
         {

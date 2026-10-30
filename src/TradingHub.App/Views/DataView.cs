@@ -94,7 +94,7 @@ internal sealed class DataView : UserControl, IPage
         var actions = Ui.H(8, _totals, refresh, openFolder);
         DockPanel.SetDock(actions, Dock.Right);
         header.Children.Add(actions);
-        header.Children.Add(Ui.V(4, Ui.H1("Datos"), Ui.Muted("Historia guardada en tu Mac. Se usa al abrir gráficos, en el replay y en los backtests.")));
+        header.Children.Add(Ui.V(4, Ui.H1("Datos"), Ui.Muted($"Historia guardada en tu {Os.Device}. Se usa al abrir gráficos, en el replay y en los backtests.")));
 
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("340,16,*,16,360") };
 
@@ -680,7 +680,7 @@ internal sealed class DataView : UserControl, IPage
         var days = SelectedDays();
         if (_selected == null || days.Count == 0)
         {
-            _status("Elegí uno o más días para borrar (⌘ o ⇧ para seleccionar varios).");
+            _status(Os.IsWindows ? "Elegí uno o más días para borrar (Ctrl o Shift para seleccionar varios)." : "Elegí uno o más días para borrar (⌘ o ⇧ para seleccionar varios).");
             return;
         }
 
@@ -821,7 +821,7 @@ internal sealed class DataView : UserControl, IPage
                              (missing > 0 ? rithmic != null ? $", {missing} sin operaciones en Rithmic (feriados o fuera de lo que guarda)" : downloader != null ? $", {missing} sin datos (feriados o fin de semana)" : $", {missing} todavía no publicados" : "") + "." +
                              (lastProblem != null ? " " + lastProblem : "");
             if (rithmic?.MissingContracts is { Count: > 0 } gone)
-                _dlStatus.Text += $" Rithmic no devolvió nada de {string.Join(", ", gone)}: no guarda la historia de los contratos vencidos, así que con Rithmic se puede bajar desde el último vencimiento. Lo que bajes o grabes queda guardado en tu Mac, así que la historia se va juntando.";
+                _dlStatus.Text += $" Rithmic no devolvió nada de {string.Join(", ", gone)}: no guarda la historia de los contratos vencidos, así que con Rithmic se puede bajar desde el último vencimiento. Lo que bajes o grabes queda guardado en tu {Os.Device}, así que la historia se va juntando.";
             _status(_dlStatus.Text);
         }
         catch (OperationCanceledException)

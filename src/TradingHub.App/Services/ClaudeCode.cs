@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Avalonia.Threading;
 
 namespace TradingHub.App.Services;
@@ -9,7 +10,7 @@ namespace TradingHub.App.Services;
 public sealed record ClaudeResult(bool IsError, string Text, double CostUsd, double Seconds, bool NeedsLogin);
 
 /// <summary>
-/// Puente con Claude Code (la CLI <c>claude</c> instalada en la Mac, con la sesión de la suscripción
+/// Puente con Claude Code (la CLI <c>claude</c> instalada en la Mac o la PC, con la sesión de la suscripción
 /// del usuario). Corre en modo no interactivo dentro de la carpeta de estrategias, con permiso solo
 /// para leer y editar archivos de esa carpeta, y transmite la respuesta a medida que llega.
 /// </summary>
@@ -31,7 +32,7 @@ public sealed class ClaudeCodeBridge
                 using var p = Process.Start(psi)!;
                 p.StandardInput.Close();
                 var read = p.StandardOutput.ReadToEndAsync();
-                if (await Task.WhenAny(read, Task.Delay(15000)) == read) text = await read;
+                if (await Task.WhenAny(read, Task.Delay(15000)) == read) text = (await read).Replace("\r\n", "\n");
                 else p.Kill(true);
             }
             catch
@@ -90,8 +91,9 @@ public sealed class ClaudeCodeBridge
         lock (Versions)
         {
             if (_best != null && File.Exists(_best) && (DateTime.UtcNow - _bestAt).TotalMinutes < 10) return _best;
-            var found = Candidates().Where(File.Exists).Distinct().ToList();
-            _best = found.Select(p => (Path: p, Version: VersionOf(p))).OrderByDescending(x => x.Version ?? new Version(0, 0)).Select(x => x.Path).FirstOrDefault();
+            var found = (OperatingSystem.IsWindows() ? WindowsCandidates() : Candidates()).Where(File.Exists).Distinct(PathComparer).ToList();
+            // a igual versión, un .exe antes que un .cmd de npm
+            _best = found.Select(p => (Path: p, Version: VersionOf(p))).OrderByDescending(x => x.Version ?? new Version(0, 0)).ThenBy(x => IsBatch(x.Path)).Select(x => x.Path).FirstOrDefault();
             _bestAt = DateTime.UtcNow;
             return _best;
         }
@@ -126,6 +128,217 @@ public sealed class ClaudeCodeBridge
 
         return list;
     }
+
+    /// <summary>En Windows las rutas no distinguen mayúsculas (el PATH y «where» pueden escribir la misma de dos maneras).</summary>
+    private static StringComparer PathComparer => OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+
+    /// <summary>Un .cmd o .bat (lo que instala npm): cmd.exe no le pasa bien los argumentos largos.</summary>
+    internal static bool IsBatch(string path) =>
+        path.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".bat", StringComparison.OrdinalIgnoreCase);
+
+    // ===================================================================== Windows
+
+    /// <summary>
+    /// Windows: el instalador oficial (claude.exe en %USERPROFILE%\.local\bin), npm (claude.cmd en %APPDATA%\npm), WinGet,
+    /// el PATH (el de este proceso y el guardado, por si instalaste Claude Code con Trading Hub abierto), «where claude» y la
+    /// que trae la app de Claude.
+    /// </summary>
+    private static IEnumerable<string> WindowsCandidates()
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var list = WindowsCandidates(home, appData, localAppData, WindowsPath()).ToList();
+        list.AddRange(WhereClaude());
+        // la que trae la app de Claude (como en la Mac, en sus datos: …\Claude\claude-code\<versión>\…\claude.exe)
+        var bundled = Path.Combine(appData, "Claude", "claude-code");
+        try
+        {
+            if (Directory.Exists(bundled))
+                foreach (var v in Directory.GetDirectories(bundled))
+                {
+                    list.Add(Path.Combine(v, "claude.exe"));
+                    foreach (var h in Directory.GetDirectories(v)) list.Add(Path.Combine(h, "claude.exe"));
+                }
+        }
+        catch (Exception)
+        {
+            // sin permiso para mirar: se usan las otras
+        }
+
+        return list;
+    }
+
+    /// <summary>Las rutas posibles de claude.exe y claude.cmd en Windows, en orden de preferencia.</summary>
+    internal static IEnumerable<string> WindowsCandidates(string home, string appData, string localAppData, string? path)
+    {
+        var dirs = new List<string>
+        {
+            Path.Combine(home, ".local", "bin"),
+            Path.Combine(home, ".claude", "local"),
+            Path.Combine(appData, "npm"),
+            Path.Combine(localAppData, "Microsoft", "WinGet", "Links"),
+        };
+        foreach (var dir in (path ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            dirs.Add(Environment.ExpandEnvironmentVariables(dir.Trim('"')));
+        foreach (var dir in dirs)
+        {
+            yield return Path.Combine(dir, "claude.exe");
+            yield return Path.Combine(dir, "claude.cmd");
+        }
+    }
+
+    /// <summary>El PATH de este proceso más el del usuario y el del sistema guardados (separados por «;»).</summary>
+    private static string WindowsPath() => string.Join(';',
+        Environment.GetEnvironmentVariable("PATH") ?? "",
+        Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User) ?? "",
+        Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine) ?? "");
+
+    /// <summary>Lo que encuentra «where claude» (busca en el PATH con las extensiones de Windows).</summary>
+    private static IEnumerable<string> WhereClaude()
+    {
+        try
+        {
+            var psi = new ProcessStartInfo("where.exe") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };
+            psi.ArgumentList.Add("claude");
+            using var p = Process.Start(psi)!;
+            var read = p.StandardOutput.ReadToEndAsync();
+            if (read.Wait(TimeSpan.FromSeconds(5))) return ParseWhere(read.Result);
+            if (!p.HasExited) p.Kill();
+        }
+        catch (Exception)
+        {
+            // sin where: alcanza con el PATH
+        }
+
+        return Array.Empty<string>();
+    }
+
+    /// <summary>Las rutas de la salida de «where» que se pueden ejecutar (.exe y .cmd), una por línea.</summary>
+    internal static List<string> ParseWhere(string output) =>
+        output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(l => l.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) || IsBatch(l))
+            .ToList();
+
+    /// <summary>Un ejecutable en el PATH de Windows (o null).</summary>
+    private static string? FindOnWindowsPath(string exe) =>
+        WindowsPath().Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(d => Path.Combine(Environment.ExpandEnvironmentVariables(d.Trim('"')), exe))
+            .FirstOrDefault(File.Exists);
+
+    /// <summary>
+    /// Windows: cómo correr la CLI. claude.exe va directo. Un claude.cmd de npm pasaría por cmd.exe, que corta los argumentos
+    /// en los saltos de línea y se come comillas y símbolos (las instrucciones y los pedidos tienen de todo): se lee el .cmd
+    /// y se corre lo que llama (node con el cli.js de Claude Code, u otro .exe) con los argumentos intactos.
+    /// </summary>
+    internal static (string File, string[] Prefix) WindowsCommand(string cli, Func<string, string?>? findOnPath = null)
+    {
+        string current = cli;
+        for (int depth = 0; depth < 3 && IsBatch(current); depth++)
+        {
+            string? target = null;
+            try
+            {
+                target = CmdShimTarget(File.ReadAllText(current));
+            }
+            catch (Exception)
+            {
+                // no se pudo leer: se prueba con la instalación global de npm
+            }
+
+            // la instalación global de npm, si el .cmd no dice nada que se entienda
+            target ??= @"node_modules\@anthropic-ai\claude-code\cli.js";
+            var dir = Path.GetDirectoryName(Path.GetFullPath(current)) ?? "";
+            var full = Path.GetFullPath(Path.Combine(dir, target.Replace('\\', Path.DirectorySeparatorChar)));
+            if (!File.Exists(full)) return (cli, Array.Empty<string>()); // como último recurso, por cmd.exe
+            if (IsBatch(full))
+            {
+                current = full; // un .cmd que llama a otro (yarn)
+                continue;
+            }
+
+            if (full.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) return (full, Array.Empty<string>());
+            if (!(full.EndsWith(".js", StringComparison.OrdinalIgnoreCase) || full.EndsWith(".cjs", StringComparison.OrdinalIgnoreCase) || full.EndsWith(".mjs", StringComparison.OrdinalIgnoreCase)))
+                return (cli, Array.Empty<string>());
+            // el node.exe que está al lado del .cmd (como hace el .cmd) o el del PATH
+            var node = Path.Combine(dir, "node.exe");
+            if (!File.Exists(node)) node = (findOnPath ?? FindOnWindowsPath)("node.exe") ?? "node.exe";
+            return (node, new[] { full });
+        }
+
+        return (current, Array.Empty<string>());
+    }
+
+    /// <summary>
+    /// Lo que llama un .cmd de npm, pnpm o yarn: la ruta relativa a su carpeta («"%dp0%\…"» o «"%~dp0\…"»), salvo node.exe.
+    /// Null si no hay ninguna.
+    /// </summary>
+    internal static string? CmdShimTarget(string content)
+    {
+        string? target = null;
+        foreach (Match m in Regex.Matches(content, @"""%~?dp0%?\\?([^""%]+)"""))
+        {
+            var rel = m.Groups[1].Value.Trim();
+            if (rel.Length > 0 && !rel.EndsWith("node.exe", StringComparison.OrdinalIgnoreCase)) target = rel;
+        }
+
+        return target;
+    }
+
+    /// <summary>Hasta dónde llega la línea de comandos en Windows (32.767 caracteres), con margen.</summary>
+    internal const int MaxWindowsCommandLine = 32000;
+
+    /// <summary>
+    /// Largo de la línea de comandos que arma .NET en Windows (como mucho): el programa entre comillas y cada argumento
+    /// con un espacio, sus comillas y las barras y comillas escapadas.
+    /// </summary>
+    internal static int WindowsCommandLineLength(string fileName, IEnumerable<string> args) =>
+        fileName.Length + 2 + args.Sum(a => 1 + a.Length + 2 + a.Count(c => c is '"' or '\\'));
+
+    /// <summary>
+    /// Si los argumentos no entran en la línea de comandos de Windows, el pedido (lo que va después de -p) sale de la lista
+    /// y se manda por la entrada estándar, de donde claude -p también lo lee. Devuelve ese texto, o null si no hizo falta
+    /// (siempre null fuera de Windows: en la Mac va todo como argumento, como siempre).
+    /// </summary>
+    internal static string? MovePromptToStdinIfTooLong(ProcessStartInfo psi)
+    {
+        if (!OperatingSystem.IsWindows() || WindowsCommandLineLength(psi.FileName, psi.ArgumentList) <= MaxWindowsCommandLine) return null;
+        int i = psi.ArgumentList.IndexOf("-p");
+        if (i < 0 || i + 1 >= psi.ArgumentList.Count) return null;
+        string prompt = psi.ArgumentList[i + 1];
+        psi.ArgumentList.RemoveAt(i + 1);
+        psi.StandardInputEncoding = new UTF8Encoding(false);
+        return prompt;
+    }
+
+    /// <summary>Le pasa el pedido por la entrada estándar (si hace falta) y la cierra, sin frenar la lectura de la salida.</summary>
+    internal static Task FeedStdinAsync(Process proc, string? prompt)
+    {
+        if (prompt == null)
+        {
+            proc.StandardInput.Close();
+            return Task.CompletedTask;
+        }
+
+        return Task.Run(async () =>
+        {
+            try
+            {
+                await proc.StandardInput.WriteAsync(prompt);
+                proc.StandardInput.Close();
+            }
+            catch (Exception)
+            {
+                // terminó antes de leerlo: el error llega por la salida
+            }
+        });
+    }
+
+    /// <summary>
+    /// Los argumentos de cmd.exe para «claude /login» en una consola nueva. Con /s, cmd saca solo las comillas de afuera y la
+    /// ruta queda entre comillas aunque tenga espacios o paréntesis.
+    /// </summary>
+    internal static string WindowsLoginArguments(string cli) => $"/s /k \"\"{cli}\" /login\"";
 
     /// <summary>Versión de una CLI ("2.1.295 (Claude Code)" → 2.1.295), con caché por archivo.</summary>
     private static Version? VersionOf(string path)
@@ -177,6 +390,13 @@ public sealed class ClaudeCodeBridge
         var cli = FindCli() ?? "claude";
         try
         {
+            if (OperatingSystem.IsWindows())
+            {
+                // una consola nueva con claude /login (en Windows 11 se abre en la Terminal de Windows si es la predeterminada)
+                Process.Start(new ProcessStartInfo("cmd.exe", WindowsLoginArguments(cli)) { UseShellExecute = true })?.Dispose();
+                return;
+            }
+
             var psi = new ProcessStartInfo("/usr/bin/osascript") { UseShellExecute = false };
             psi.ArgumentList.Add("-e");
             psi.ArgumentList.Add($"tell application \"Terminal\" to do script \"'{cli}' /login\"");
@@ -192,7 +412,9 @@ public sealed class ClaudeCodeBridge
 
     internal static ProcessStartInfo Prepare(string cli, string workDir)
     {
-        var psi = new ProcessStartInfo(cli)
+        // en Windows, un claude.cmd de npm se corre a través de node (ver WindowsCommand)
+        var (file, prefix) = OperatingSystem.IsWindows() ? WindowsCommand(cli) : (cli, Array.Empty<string>());
+        var psi = new ProcessStartInfo(file)
         {
             WorkingDirectory = workDir,
             RedirectStandardOutput = true,
@@ -201,12 +423,16 @@ public sealed class ClaudeCodeBridge
             UseShellExecute = false,
             StandardOutputEncoding = Encoding.UTF8,
         };
+        foreach (var a in prefix) psi.ArgumentList.Add(a);
 
-        // entorno limpio: que no herede credenciales temporales de otra sesión de Claude
+        // entorno limpio: que no herede credenciales temporales de otra sesión de Claude (en Windows se deja dónde está
+        // Git Bash, que Claude Code necesita ahí y no es ninguna credencial)
         foreach (var key in psi.Environment.Keys.ToList())
-            if (key.StartsWith("CLAUDE", StringComparison.Ordinal) || key.StartsWith("ANTHROPIC", StringComparison.Ordinal))
+            if ((key.StartsWith("CLAUDE", StringComparison.Ordinal) || key.StartsWith("ANTHROPIC", StringComparison.Ordinal))
+                && !(OperatingSystem.IsWindows() && key.Equals("CLAUDE_CODE_GIT_BASH_PATH", StringComparison.OrdinalIgnoreCase)))
                 psi.Environment.Remove(key);
-        psi.Environment["PATH"] = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:" + (Environment.GetEnvironmentVariable("PATH") ?? "");
+        if (OperatingSystem.IsWindows()) psi.StandardErrorEncoding = Encoding.UTF8; // el PATH de Windows ya trae node y lo demás
+        else psi.Environment["PATH"] = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:" + (Environment.GetEnvironmentVariable("PATH") ?? "");
         psi.Environment["TERM"] = "dumb";
         return psi;
     }
@@ -245,7 +471,7 @@ public sealed class ClaudeCodeBridge
         var cli = FindCli();
         if (cli == null)
         {
-            Post(() => Finished?.Invoke(new ClaudeResult(true, "No encontré Claude Code en esta Mac. Instalalo desde claude.com/claude-code y volvé a intentar.", 0, 0, false)));
+            Post(() => Finished?.Invoke(new ClaudeResult(true, $"No encontré Claude Code en esta {Os.Device}. Instalalo desde claude.com/claude-code y volvé a intentar.", 0, 0, false)));
             return;
         }
 
@@ -302,6 +528,7 @@ public sealed class ClaudeCodeBridge
             psi.ArgumentList.Add(SessionId);
         }
 
+        var stdinPrompt = MovePromptToStdinIfTooLong(psi);
         var sw = Stopwatch.StartNew();
         var finalText = new StringBuilder();
         var stderr = new StringBuilder();
@@ -310,7 +537,7 @@ public sealed class ClaudeCodeBridge
         try
         {
             _proc = Process.Start(psi)!;
-            _proc.StandardInput.Close();
+            _ = FeedStdinAsync(_proc, stdinPrompt);
             _proc.ErrorDataReceived += (_, e) =>
             {
                 if (e.Data != null) stderr.AppendLine(e.Data);
