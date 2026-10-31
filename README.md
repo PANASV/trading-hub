@@ -183,6 +183,7 @@ Esos indicadores son de sus autores: usalos respetando la licencia de cada fuent
 | [Backtesting](docs/backtesting.md) | Backtest, optimización, walk-forward, PBO, CPCV y Monte Carlo |
 | [En vivo](docs/en-vivo.md) | Estrategias en tus cuentas, portafolios y agente de riesgo |
 | [Claude](docs/asistente-claude.md) | El asistente de estrategias y el laboratorio MCP |
+| [Codex](docs/codex.md) | Usar Codex CLI (ChatGPT) en vez de Claude, y elegir el modelo |
 | [Indicadores](docs/indicadores.md) | Incluidos, propios y compatibles con la API de ATAS |
 | [Ajustes](docs/ajustes.md) | Todas las opciones |
 | [Privacidad](docs/privacidad.md) | Qué queda en tu Mac y qué se conecta a internet |

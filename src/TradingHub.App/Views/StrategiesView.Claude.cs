@@ -10,10 +10,13 @@ using TradingHub.App.Services;
 
 namespace TradingHub.App.Views;
 
-/// <summary>Panel de Claude Code dentro de la pestaña Código: pedís estrategias y ves el código en el editor.</summary>
+/// <summary>Panel del asistente (Claude Code o Codex) dentro de la pestaña Código: pedís estrategias y ves el código en el editor.</summary>
 internal sealed partial class StrategiesView
 {
-    private readonly ClaudeCodeBridge _claude = new();
+    private IAiBridge _claude = new ClaudeCodeBridge();
+    private readonly TextBlock _aiTitle = new() { FontWeight = FontWeight.SemiBold, FontSize = 14 };
+    private string _workingText = "";
+    private string EngineName => AiEngines.Name(_claude.Engine);
     private readonly StackPanel _chat = new() { Spacing = 10, Margin = new Thickness(14, 12) };
     private readonly ScrollViewer _chatScroll = new() { HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled };
     private readonly TextBox _prompt = new()
@@ -51,7 +54,7 @@ internal sealed partial class StrategiesView
         {
             if (_claude.IsRunning) return;
             _claude.NewConversation();
-            _conv = new ChatConversation();
+            _conv = new ChatConversation { Engine = _claude.Engine };
             _chat.Children.Clear();
             ShowSuggestions();
         }, 17);
@@ -59,13 +62,17 @@ internal sealed partial class StrategiesView
         ToolTip.SetTip(history, L.T("Historial de conversaciones (se pueden retomar donde quedaron)"));
         history.Click += (_, _) => ShowHistoryMenu(history);
         _claudeDetach = Ui.IconButton(MaterialIconKind.OpenInNew, L.T("Sacar el chat a una ventana aparte"), ToggleClaudeWindow, 17);
-        var title = Ui.V(1, Ui.H(8, Ui.Icon(MaterialIconKind.Creation, 18, Ui.Accent), new TextBlock { Text = L.T("Claude"), FontWeight = FontWeight.SemiBold, FontSize = 14 }), _claudeStatus);
+        var title = Ui.V(1, Ui.H(8, Ui.Icon(MaterialIconKind.Creation, 18, Ui.Accent), _aiTitle), _claudeStatus);
+        // elegir asistente (Claude o Codex), modelo y razonamiento
+        var engineButton = new Button { Content = Ui.Icon(MaterialIconKind.TuneVariant, 17) }.Classes("icon");
+        ToolTip.SetTip(engineButton, L.T("Asistente y modelo (Claude Code o Codex)"));
+        engineButton.Click += (_, _) => ShowEngineMenu(engineButton);
         // laboratorio: Claude corre backtests, optimizaciones y walk-forward por su cuenta
         _labToggle.Content = Ui.H(6, Ui.Icon(MaterialIconKind.FlaskOutline, 15), new TextBlock { Text = L.T("Laboratorio"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
         _labToggle.Padding = new Thickness(8, 4);
         ToolTip.SetTip(_labToggle, L.T("Modo laboratorio: Claude puede bajar datos, correr backtests, optimizaciones, walk-forward y Monte Carlo por su cuenta, decidir si la estrategia es ganadora o perdedora y dejar un reporte en la pestaña Reportes."));
         _labToggle.IsCheckedChanged += (_, _) => UpdateClaudeHint();
-        var headRight = Ui.H(6, _labToggle, history, newChat, _claudeDetach);
+        var headRight = Ui.H(6, _labToggle, engineButton, history, newChat, _claudeDetach);
         var head = new DockPanel { Margin = new Thickness(14, 10, 10, 10) };
         DockPanel.SetDock(headRight, Dock.Right);
         head.Children.Add(headRight);
@@ -99,32 +106,191 @@ internal sealed partial class StrategiesView
         root.Children.Add(input);
         root.Children.Add(_chatScroll);
 
+        UseEngine(App.Services.Settings.AiEngine);
+        ShowSuggestions();
+        return new Border { Child = root, Background = Ui.Bg1, BorderBrush = Ui.Line, BorderThickness = new Thickness(1, 0, 0, 0) };
+    }
+
+    // ===================================================================== asistente: Claude Code o Codex
+
+    private void OnAiFinished(ClaudeResult r) => _ = OnClaudeFinishedAsync(r);
+
+    /// <summary>Usa este asistente en el chat (con el modelo y el razonamiento guardados en los ajustes).</summary>
+    private void UseEngine(string engine)
+    {
+        engine = AiEngines.Normalize(engine);
+        if (_claude.IsRunning) return;
+        if (_claude.Engine != engine)
+        {
+            _claude.Text -= OnClaudeText;
+            _claude.ToolUsed -= OnClaudeTool;
+            _claude.ToolFinished -= ReloadIfChangedOnDisk;
+            _claude.Finished -= OnAiFinished;
+            _claude = AiEngines.Create(engine);
+        }
+        else
+        {
+            // ya suscripto (salvo la primera vez)
+            _claude.Text -= OnClaudeText;
+            _claude.ToolUsed -= OnClaudeTool;
+            _claude.ToolFinished -= ReloadIfChangedOnDisk;
+            _claude.Finished -= OnAiFinished;
+        }
+
         _claude.Text += OnClaudeText;
         _claude.ToolUsed += OnClaudeTool;
         _claude.ToolFinished += ReloadIfChangedOnDisk;
-        _claude.Finished += r => _ = OnClaudeFinishedAsync(r);
+        _claude.Finished += OnAiFinished;
+        ApplyModel();
+        _aiTitle.Text = EngineName;
+        UpdateClaudeHint();
         _ = DetectClaudeAsync();
-        ShowSuggestions();
-        return new Border { Child = root, Background = Ui.Bg1, BorderBrush = Ui.Line, BorderThickness = new Thickness(1, 0, 0, 0) };
+    }
+
+    private void ApplyModel()
+    {
+        var s = App.Services.Settings;
+        bool codex = _claude.Engine == AiEngines.Codex;
+        _claude.ModelOverride = codex ? s.CodexModel : s.ClaudeModel;
+        _claude.EffortOverride = codex ? s.CodexEffort : s.ClaudeEffort;
+    }
+
+    /// <summary>Menú del asistente: Claude Code o Codex, modelo (se puede escribir otro) y razonamiento.</summary>
+    private void ShowEngineMenu(Control anchor)
+    {
+        var s = App.Services.Settings;
+        string engine = _claude.Engine;
+        var engines = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch };
+        foreach (var e in AiEngines.All) engines.Items.Add(new ComboBoxItem { Content = AiEngines.Product(e), Tag = e });
+        engines.SelectedItem = engines.Items.OfType<ComboBoxItem>().First(i => (string)i.Tag! == engine);
+
+        var models = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch };
+        var custom = new TextBox { Watermark = L.T("Otro modelo (id exacto, opcional)") };
+        var efforts = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch };
+        var note = new TextBlock { Classes = { "faint", "small" }, TextWrapping = TextWrapping.Wrap, MaxWidth = 300 };
+        bool loading = false;
+
+        string CurrentModel(string e) => e == AiEngines.Codex ? s.CodexModel : s.ClaudeModel;
+        string CurrentEffort(string e) => e == AiEngines.Codex ? s.CodexEffort : s.ClaudeEffort;
+
+        void Fill(string e)
+        {
+            loading = true;
+            models.Items.Clear();
+            foreach (var (id, name) in AiEngines.Models(e)) models.Items.Add(new ComboBoxItem { Content = L.T(name), Tag = id });
+            var m = CurrentModel(e);
+            var known = models.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag! == m);
+            models.SelectedItem = known ?? models.Items[0];
+            custom.Text = known == null ? m : "";
+            efforts.Items.Clear();
+            foreach (var (id, name) in AiEngines.Efforts(e)) efforts.Items.Add(new ComboBoxItem { Content = L.T(name), Tag = id });
+            efforts.SelectedItem = efforts.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (string)i.Tag! == CurrentEffort(e)) ?? efforts.Items[0];
+            note.Text = e == AiEngines.Codex
+                ? L.T("Codex usa tu cuenta de ChatGPT (o tu API key) con «codex login». Los nombres de los modelos de OpenAI cambian seguido: si uno deja de andar, elegí «Predeterminado» o escribí el id exacto.")
+                : L.T("Claude Code usa tu suscripción de Claude. Opus 5.5 es el más capaz; Sonnet y Haiku son más rápidos.");
+            loading = false;
+        }
+
+        void Save()
+        {
+            if (loading || engines.SelectedItem is not ComboBoxItem { Tag: string e }) return;
+            string model = !string.IsNullOrWhiteSpace(custom.Text) ? custom.Text.Trim() : models.SelectedItem is ComboBoxItem { Tag: string id } ? id : "";
+            string effort = efforts.SelectedItem is ComboBoxItem { Tag: string ef } ? ef : "";
+            if (e == AiEngines.Codex)
+            {
+                s.CodexModel = model;
+                s.CodexEffort = effort;
+            }
+            else
+            {
+                s.ClaudeModel = model;
+                s.ClaudeEffort = effort;
+            }
+
+            s.Save();
+            if (_claude.Engine == e) ApplyModel();
+            _ = DetectClaudeAsync();
+        }
+
+        Fill(engine);
+        engines.SelectionChanged += (_, _) =>
+        {
+            if (loading || engines.SelectedItem is not ComboBoxItem { Tag: string e } || e == _claude.Engine) return;
+            if (_claude.IsRunning)
+            {
+                engines.SelectedItem = engines.Items.OfType<ComboBoxItem>().First(i => (string)i.Tag! == _claude.Engine);
+                return;
+            }
+
+            s.AiEngine = e;
+            s.Save();
+            Fill(e);
+            UseEngine(e);
+            // la sesión de un asistente no sigue en el otro: conversación nueva
+            if (_conv.Messages.Count > 0)
+            {
+                _claude.NewConversation();
+                _conv = new ChatConversation { Engine = e };
+                _chat.Children.Clear();
+                ShowSuggestions();
+            }
+        };
+        models.SelectionChanged += (_, _) =>
+        {
+            if (loading) return;
+            loading = true;
+            custom.Text = "";
+            loading = false;
+            Save();
+        };
+        custom.LostFocus += (_, _) => Save();
+        custom.KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Enter) Save();
+        };
+        efforts.SelectionChanged += (_, _) => Save();
+
+        var login = Ui.Button(L.T("Iniciar sesión"), MaterialIconKind.Login, () => AiEngines.OpenLogin(_claude.Engine));
+        login.Padding = new Thickness(10, 4);
+        var content = Ui.V(8,
+            new TextBlock { Text = L.T("Asistente"), Classes = { "small" }, FontWeight = FontWeight.SemiBold }, engines,
+            new TextBlock { Text = L.T("Modelo"), Classes = { "small" }, FontWeight = FontWeight.SemiBold }, models, custom,
+            new TextBlock { Text = L.T("Razonamiento"), Classes = { "small" }, FontWeight = FontWeight.SemiBold }, efforts,
+            note, login);
+        content.Width = 300;
+        content.Margin = new Thickness(4);
+        new Flyout { Content = content, Placement = PlacementMode.BottomEdgeAlignedRight }.ShowAt(anchor);
     }
 
     private void UpdateClaudeHint()
     {
         bool lab = _labToggle.IsChecked == true;
+        bool codex = _claude.Engine == AiEngines.Codex;
         _claudeHint.Text = lab
-            ? L.T("Laboratorio: Claude corre las pruebas por su cuenta (pueden tardar varios minutos) y guarda un reporte en Reportes.")
-            : L.T("Usa tu Claude Code (suscripción). Solo puede leer y editar archivos de la carpeta de estrategias.");
+            ? L.F("Laboratorio: {0} corre las pruebas por su cuenta (pueden tardar varios minutos) y guarda un reporte en Reportes.", EngineName)
+            : codex
+                ? L.T("Usa tu Codex (cuenta de ChatGPT). Trabaja solo en la carpeta de estrategias, sin red.")
+                : L.T("Usa tu Claude Code (suscripción). Solo puede leer y editar archivos de la carpeta de estrategias.");
         _claudeHint.Foreground = lab ? Ui.Accent : null;
         _prompt.Watermark = lab ? L.T("Ej.: investigá y optimizá la estrategia abierta con 60 días de BTCUSDT y decime si es ganadora") : L.T("Pedile una estrategia o un cambio…");
     }
 
     private async Task DetectClaudeAsync()
     {
-        var v = await ClaudeCodeBridge.VersionAsync();
-        _claudeStatus.Text = v != null ? L.F("Claude Code {0} · tu suscripción",v.Replace("(Claude Code)", "").Trim()) : L.T("Claude Code no está instalado");
+        var engine = _claude.Engine;
+        var v = await AiEngines.VersionAsync(engine);
+        if (engine != _claude.Engine) return; // cambió de asistente mientras se buscaba
+        string model = _claude.ModelOverride is { Length: > 0 } m ? " · " + (AiEngines.Models(engine).FirstOrDefault(x => x.Id == m).Name is { } n ? L.T(n) : m) : "";
+        _claudeStatus.Text = v == null
+            ? L.F("{0} no está instalado", AiEngines.Product(engine))
+            : engine == AiEngines.Codex
+                ? L.F("Codex {0} · tu cuenta", CodexBridge.ShortVersion(v)) + model
+                : L.F("Claude Code {0} · tu suscripción", v.Replace("(Claude Code)", "").Trim()) + model;
         _sendButton.IsEnabled = v != null;
         if (v == null)
-            AddNote(MaterialIconKind.AlertCircleOutline, L.F("No encontré Claude Code en esta {0}. Instalalo (claude.com/claude-code), iniciá sesión con tu cuenta y volvé a abrir Trading Hub.",Os.Device), Ui.Warn);
+            AddNote(MaterialIconKind.AlertCircleOutline, engine == AiEngines.Codex
+                ? L.F("No encontré Codex CLI en esta {0}. Instalalo ({1}), iniciá sesión con «codex login» y volvé a elegir Codex.", Os.Device, AiEngines.InstallHint(engine))
+                : L.F("No encontré Claude Code en esta {0}. Instalalo (claude.com/claude-code), iniciá sesión con tu cuenta y volvé a abrir Trading Hub.",Os.Device), Ui.Warn);
     }
 
     private void ShowSuggestions()
@@ -201,6 +367,7 @@ internal sealed partial class StrategiesView
         {
             _conv.Title = text.Length > 70 ? text[..70].TrimEnd() + "…" : text;
             _conv.Lab = _labToggle.IsChecked == true;
+            _conv.Engine = _claude.Engine;
             _conv.Strategy = _current != null ? Path.GetFileName(_current.Path) : null;
         }
 
@@ -227,7 +394,8 @@ internal sealed partial class StrategiesView
         _editor.IsReadOnly = true;
         bool lab = _labToggle.IsChecked == true;
         _reportsBefore = Lab.ReportStore.List().Select(r => r.Path).ToHashSet();
-        AddNote(MaterialIconKind.ProgressClock, L.T("Claude está trabajando…"));
+        _workingText = L.F("{0} está trabajando…", EngineName);
+        AddNote(MaterialIconKind.ProgressClock, _workingText);
         await _claude.SendAsync(prompt, AppPaths.Strategies, ClaudeCodeBridge.StrategySystemPrompt + ClaudeCodeBridge.IndicatorSystemPrompt + (lab ? ClaudeCodeBridge.LabSystemPrompt : ""), lab,
             new[] { AppPaths.UserIndicators, Directory.CreateDirectory(Lab.LabServer.CapturesDir).FullName });
     }
@@ -333,14 +501,18 @@ internal sealed partial class StrategiesView
             "Write" => (MaterialIconKind.FilePlusOutline, L.T("Escribiendo")),
             "Edit" or "MultiEdit" => (MaterialIconKind.FileEditOutline, L.T("Editando")),
             "Read" => (MaterialIconKind.FileEyeOutline, L.T("Leyendo")),
+            "Delete" => (MaterialIconKind.FileRemoveOutline, L.T("Borrando")),
+            "Bash" => (MaterialIconKind.Console, L.T("Ejecutando")),
+            "WebSearch" => (MaterialIconKind.Web, L.T("Buscando en la web")),
             _ => (MaterialIconKind.FolderSearchOutline, L.T("Buscando")),
         };
+        if (tool is "Bash" or "WebSearch") name = file ?? "";
         AddNote(icon, $"{verb} {name}".Trim());
     }
 
     private void RemoveWorkingNote()
     {
-        var note = _chat.Children.OfType<StackPanel>().LastOrDefault(p => p.Children.Count == 2 && p.Children[1] is TextBlock tb && tb.Text == L.T("Claude está trabajando…"));
+        var note = _chat.Children.OfType<StackPanel>().LastOrDefault(p => p.Children.Count == 2 && p.Children[1] is TextBlock tb && tb.Text == _workingText);
         if (note != null) _chat.Children.Remove(note);
     }
 
@@ -358,7 +530,7 @@ internal sealed partial class StrategiesView
     private async Task OnClaudeFinishedAsync(ClaudeResult r)
     {
         _conv.SessionId = _claude.SessionId ?? _conv.SessionId;
-        if (r.IsError) _conv.Messages.Add(new ChatMessage { Role = "note", Text = r.NeedsLogin ? L.T("Claude Code pidió iniciar sesión.") : r.Text.Length > 400 ? r.Text[..400] + "…" : r.Text });
+        if (r.IsError) _conv.Messages.Add(new ChatMessage { Role = "note", Text = r.NeedsLogin ? L.F("{0} pidió iniciar sesión.", AiEngines.Product(_claude.Engine)) : r.Text.Length > 400 ? r.Text[..400] + "…" : r.Text });
         else if (!_gotReplyText && !string.IsNullOrWhiteSpace(r.Text)) _conv.Messages.Add(new ChatMessage { Role = "assistant", Text = r.Text });
         ChatHistory.Save(_conv);
         RemoveWorkingNote();
@@ -369,10 +541,14 @@ internal sealed partial class StrategiesView
         {
             if (r.NeedsLogin)
             {
-                var login = Ui.Button(L.T("Iniciar sesión en Claude Code"), MaterialIconKind.Login, ClaudeCodeBridge.OpenLoginTerminal, "primary");
+                var engine = _claude.Engine;
+                bool codex = engine == AiEngines.Codex;
+                var login = Ui.Button(codex ? L.T("Iniciar sesión en Codex") : L.T("Iniciar sesión en Claude Code"), MaterialIconKind.Login, () => AiEngines.OpenLogin(engine), "primary");
                 var card = Ui.Card(Ui.V(8,
-                    new TextBlock { Text = L.T("Claude Code necesita que inicies sesión"), FontWeight = FontWeight.SemiBold },
-                    new TextBlock { Text = (Os.IsWindows ? L.T("Se abre una ventana de comandos") : L.T("Se abre la Terminal")) + L.T(" con Claude Code: elegí tu cuenta de Claude (suscripción) y seguí los pasos en el navegador. Después volvé acá y repetí el pedido."), Classes = { "muted", "small" }, TextWrapping = TextWrapping.Wrap },
+                    new TextBlock { Text = codex ? L.T("Codex necesita que inicies sesión") : L.T("Claude Code necesita que inicies sesión"), FontWeight = FontWeight.SemiBold },
+                    new TextBlock { Text = (Os.IsWindows ? L.T("Se abre una ventana de comandos") : L.T("Se abre la Terminal")) + (codex
+                        ? L.T(" con «codex login»: elegí «Sign in with ChatGPT» (tu suscripción) o tu API key y seguí los pasos en el navegador. Después volvé acá y repetí el pedido.")
+                        : L.T(" con Claude Code: elegí tu cuenta de Claude (suscripción) y seguí los pasos en el navegador. Después volvé acá y repetí el pedido.")), Classes = { "muted", "small" }, TextWrapping = TextWrapping.Wrap },
                     login), 12);
                 _chat.Children.Add(card);
             }
@@ -465,7 +641,7 @@ internal sealed partial class StrategiesView
             var title = new TextBlock { Text = string.IsNullOrWhiteSpace(conv.Title) ? L.T("(sin título)") : conv.Title, TextTrimming = TextTrimming.CharacterEllipsis, FontSize = 12.5, FontWeight = ReferenceEquals(conv.Id, _conv.Id) || conv.Id == _conv.Id ? FontWeight.SemiBold : FontWeight.Normal };
             var meta = new TextBlock
             {
-                Text = L.F("{0} · {1} mensaje(s){2}{3}",Ui.Ago(conv.UpdatedUtc),conv.Messages.Count(m => m.Role == "user"),(conv.Lab ? L.T(" · laboratorio") : ""),(conv.Strategy != null ? " · " + conv.Strategy : "")),
+                Text = L.F("{0} · {1} mensaje(s){2}{3}",Ui.Ago(conv.UpdatedUtc),conv.Messages.Count(m => m.Role == "user"),(conv.Lab ? L.T(" · laboratorio") : ""),(conv.Strategy != null ? " · " + conv.Strategy : "")) + (AiEngines.Normalize(conv.Engine) == AiEngines.Codex ? " · Codex" : ""),
                 Classes = { "faint", "small" },
                 TextTrimming = TextTrimming.CharacterEllipsis,
             };
@@ -495,6 +671,8 @@ internal sealed partial class StrategiesView
     private void LoadConversation(ChatConversation conv)
     {
         if (_claude.IsRunning) return;
+        // la sesión se sigue con el asistente con que se empezó
+        if (AiEngines.Normalize(conv.Engine) != _claude.Engine) UseEngine(conv.Engine);
         _conv = conv;
         _claude.Resume(conv.SessionId);
         _labToggle.IsChecked = conv.Lab;
@@ -507,7 +685,7 @@ internal sealed partial class StrategiesView
 
         _currentReply = null;
         AddNote(MaterialIconKind.History, conv.SessionId != null
-            ? L.T("Conversación retomada: lo que escribas sigue desde acá, con todo lo que Claude ya sabía.")
+            ? L.F("Conversación retomada con {0}: lo que escribas sigue desde acá, con todo lo que ya sabía.", EngineName)
             : L.T("Conversación guardada (sin sesión de Claude): lo que escribas empieza una sesión nueva."));
         ScrollChatToEnd();
     }

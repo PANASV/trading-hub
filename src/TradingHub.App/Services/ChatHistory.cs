@@ -21,6 +21,9 @@ public sealed class ChatConversation
     public string? SessionId { get; set; }
     public bool Lab { get; set; }
 
+    /// <summary>Con qué asistente se habló («claude» o «codex»): la sesión solo se puede seguir con ese.</summary>
+    public string Engine { get; set; } = "claude";
+
     /// <summary>Archivo de estrategia abierto cuando empezó la charla.</summary>
     public string? Strategy { get; set; }
 

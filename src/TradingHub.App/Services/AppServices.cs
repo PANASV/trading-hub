@@ -206,6 +206,17 @@ public sealed class AppSettings
     public double ClaudeWindowWidth { get; set; } = 460;
     public double ClaudeWindowHeight { get; set; } = 760;
 
+    /// <summary>Quién atiende el chat de estrategias: «claude» (Claude Code) o «codex» (Codex CLI de OpenAI).</summary>
+    public string AiEngine { get; set; } = "claude";
+
+    /// <summary>Modelo y esfuerzo de Claude Code (vacío = los de Trading Hub).</summary>
+    public string ClaudeModel { get; set; } = "";
+    public string ClaudeEffort { get; set; } = "";
+
+    /// <summary>Modelo y esfuerzo de Codex (vacío = los de tu configuración de Codex).</summary>
+    public string CodexModel { get; set; } = "";
+    public string CodexEffort { get; set; } = "";
+
     /// <summary>Gráficos vinculados por color: qué se sincroniza dentro de cada grupo.</summary>
     public bool LinkSymbol { get; set; } = true;
     public bool LinkPeriod { get; set; } = true;
