@@ -980,6 +980,7 @@
  "Historia (CSV, TXT)": "History (CSV, TXT)",
  "Historia al abrir un gráfico": "History when opening a chart",
  "Historia gratis (con cuenta gratis): US100 = USA Tech, US500, US30, DAX, oro, forex… Elegí ticks o velas de 1 minuto y exportá en CSV": "Free history (with free account): US100 = USA Tech, US500, US30, DAX, gold, forex… Choose ticks or 1-minute candles and export as CSV",
+ "Historia guardada (sin tiempo real)": "Stored history (no real time)",
  "Historia guardada en tu {0}. Se usa al abrir gráficos, en el replay y en los backtests.": "History saved on your {0}. Used when opening charts, in replay and in backtests.",
  "Historia tick a tick de los futuros de CME (NQ, ES, MNQ, MES, CL, GC…) desde 2010, con el lado agresor real de cada operación: lo que Rithmic no guarda. Es pago por uso; las cuentas nuevas traen US$ 125 de créditos gratis.": "Tick-by-tick history of CME futures (NQ, ES, MNQ, MES, CL, GC…) since 2010, with the real aggressor side of each trade: what Rithmic doesn't keep. Pay-as-you-go; new accounts come with US$ 125 of free credits.",
  "Historial": "History",

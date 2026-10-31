@@ -1015,6 +1015,7 @@
  "Historia (CSV, TXT)": "历史（CSV、TXT）",
  "Historia al abrir un gráfico": "打开图表时加载的历史",
  "Historia gratis (con cuenta gratis): US100 = USA Tech, US500, US30, DAX, oro, forex… Elegí ticks o velas de 1 minuto y exportá en CSV": "免费历史（需免费账户）：US100 = USA Tech、US500、US30、DAX、黄金、外汇… 选择逐笔或 1 分钟 K 线并导出为 CSV",
+ "Historia guardada (sin tiempo real)": "已保存的历史（非实时）",
  "Historia guardada en tu {0}. Se usa al abrir gráficos, en el replay y en los backtests.": "历史保存在你的 {0} 上。用于打开图表、回放和回测。",
  "Historia tick a tick de los futuros de CME (NQ, ES, MNQ, MES, CL, GC…) desde 2010, con el lado agresor real de cada operación: lo que Rithmic no guarda. Es pago por uso; las cuentas nuevas traen US$ 125 de créditos gratis.": "CME 期货（NQ、ES、MNQ、MES、CL、GC…）自 2010 年起的逐笔历史，含每笔成交真实的主动方：这是 Rithmic 不保存的。按量付费；新账户附赠 125 美元免费额度。",
  "Historial": "历史",

@@ -1322,6 +1322,15 @@ public sealed partial class TradingView : UserControl
         Sound.Play();
     }
 
+    /// <summary>Símbolo del gráfico inicial (con velas importadas de IB Gateway).</summary>
+    internal const string DefaultSymbol = "MNQ";
+
+    private static bool HasStoredDays(string feedId, string symbol)
+    {
+        var dir = Path.Combine(AppPaths.Ticks, feedId, symbol);
+        return Directory.Exists(dir) && Directory.EnumerateFiles(dir, "*.vtk").Any();
+    }
+
     internal async Task RestoreOrDefaultAsync()
     {
         try
@@ -1338,7 +1347,12 @@ public sealed partial class TradingView : UserControl
         }
 
         // gráfico de velas como TradingView con las medias EMA 9 (amarilla), EMA 60 (violeta) y WMA 200 (azul)
-        var tab = await NewTabAsync(SimulatedFeed.FeedId, "SIM-BTC", ChartPeriod.M5, new ChartSettings { Style = ChartStyle.Candles, Layout = FootprintLayout.Presets[1].Clone() });
+        // MNQ en 1 minuto con las velas importadas de IB Gateway; sin esos datos, el simulador
+        var settings = new ChartSettings { Style = ChartStyle.Candles, Layout = FootprintLayout.Presets[1].Clone() };
+        var ib = _svc.Connections.EnsureIbHistory();
+        var tab = ib is { Enabled: true } && HasStoredDays(TradingHub.Data.IbBarImport.FeedId, DefaultSymbol)
+            ? await NewTabAsync(ib.Id, DefaultSymbol, ChartPeriod.M1, settings)
+            : await NewTabAsync(SimulatedFeed.FeedId, "SIM-BTC", ChartPeriod.M5, settings);
         tab.Model?.AddIndicator(new TradingHub.Indicators.Native.QuanTAlibBridge.QtMaRibbon());
         RestorePanelWindows();
     }

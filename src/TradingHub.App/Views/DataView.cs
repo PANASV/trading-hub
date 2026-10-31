@@ -491,6 +491,8 @@ internal sealed class DataView : UserControl, IPage
                                  (r.Contracts.Count > 0 ? L.F(" · contratos {0}",string.Join(", ", r.Contracts)) : "") +
                                  (r.BadLines > 0 ? L.F(" · {0:N0} filas que no se pudieron leer",r.BadLines) : "") +
                                  L.T(". Aparece como «IB Gateway» en la lista de la izquierda y en los backtests.");
+            // para abrirla en los gráficos: la conexión de IB (se crea si no hay) y sus símbolos de nuevo
+            if (_svc.Connections.EnsureIbHistory() is { } ib) InstrumentPicker.ClearCache(ib.Id);
             _status(_importStatus.Text);
         }
         catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException)

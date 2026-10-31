@@ -186,8 +186,8 @@ public sealed class ConnectionProfile
         _ => "ib",
     };
 
-    /// <summary>Da datos de mercado para gráficos (Databento e IB, no).</summary>
-    [JsonIgnore] public bool HasMarketData => Kind is not (ConnectionKind.InteractiveBrokers or ConnectionKind.Databento);
+    /// <summary>Da datos de mercado para gráficos (Databento, no; IB, la historia importada de IB Gateway, sin tiempo real).</summary>
+    [JsonIgnore] public bool HasMarketData => Kind is not ConnectionKind.Databento;
 
     /// <summary>Id por defecto del primer perfil de cada tipo (el mismo de sus datos).</summary>
     public static string DefaultId(ConnectionKind kind) => kind switch
@@ -231,6 +231,36 @@ public sealed class ConnectionManager
             Profiles.Add(new ConnectionProfile { Id = RithmicFeed.FeedId, Kind = ConnectionKind.Rithmic, Name = "Rithmic", Enabled = false });
             Save();
         }
+
+        EnsureIbHistory();
+    }
+
+    /// <summary>
+    /// Si hay velas importadas de IB Gateway y ninguna conexión de IB, agrega una (id «ib») para abrirlas en los gráficos.
+    /// Devuelve la conexión de IB (o null si no hay datos ni conexión).
+    /// </summary>
+    public ConnectionProfile? EnsureIbHistory()
+    {
+        var existing = Profiles.FirstOrDefault(p => p.Kind == ConnectionKind.InteractiveBrokers);
+        if (existing != null)
+        {
+            // antes IB no daba gráficos y quedaba con la historia por defecto (1,5 h): con velas de 1 minuto no alcanza
+            // ni para la WMA 200, así que se pasa a 3 días
+            if (existing.HistoryHours == 1.5)
+            {
+                existing.HistoryHours = 72;
+                Save();
+            }
+
+            return existing;
+        }
+
+        if (!Directory.Exists(Path.Combine(AppPaths.Ticks, IbBarImport.FeedId))) return null;
+        var p = new ConnectionProfile { Id = IbBarImport.FeedId, Kind = ConnectionKind.InteractiveBrokers, Name = "IB Gateway", HistoryHours = 72 };
+        Profiles.Add(p);
+        Save();
+        Changed?.Invoke();
+        return p;
     }
 
     public IEnumerable<ConnectionProfile> Enabled => Profiles.Where(p => p.Enabled);
@@ -318,7 +348,8 @@ public sealed class ConnectionManager
             ConnectionKind.Oanda => new TradingHub.Feeds.Oanda.OandaFeed(OandaSettingsOf(p)),
             ConnectionKind.Alpaca => new TradingHub.Feeds.Alpaca.AlpacaFeed(AlpacaSettingsOf(p)),
             ConnectionKind.Databento => throw new NotSupportedException(L.T("Databento no da datos en vivo: se usa desde Datos para bajar historia de futuros.")),
-            _ => throw new NotSupportedException(L.T("Interactive Brokers todavía no da datos en Trading Hub (solo prueba de conexión).")),
+            // las velas de 1 minuto importadas de IB Gateway (sin tiempo real)
+            _ => new StoredHistoryFeed(AppPaths.Ticks, IbBarImport.FeedId, "IB Gateway", IbBarImport.InstrumentFor),
         };
         _feeds[p.Id] = f;
         return f;
