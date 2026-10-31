@@ -118,4 +118,50 @@ public class IbBarImportTests
             dir.Delete(true);
         }
     }
+    [Fact]
+    public async Task El_grafico_abre_la_historia_importada_y_termina_en_la_ultima_vela()
+    {
+        var dir = Directory.CreateTempSubdirectory("th-ib-feed-");
+        try
+        {
+            var src = Directory.CreateDirectory(Path.Combine(dir.FullName, "out")).FullName;
+            var root = Path.Combine(dir.FullName, "Ticks");
+            var bars = Bars(Start, 600, 25000m, "MNQZ6");
+            Write(src, "mnq1m_2026-10-30.csv", bars);
+            IbBarImport.ImportFolder(src, root);
+
+            using var feed = new TradingHub.Feeds.StoredHistoryFeed(root, IbBarImport.FeedId, "IB Gateway", IbBarImport.InstrumentFor);
+            var inst = Assert.Single(await feed.GetInstrumentsAsync(CancellationToken.None));
+            Assert.Equal("MNQ", inst.Symbol);
+            Assert.Equal(IbBarImport.FeedId, inst.FeedId);
+            Assert.False(feed.IsLive);
+
+            // la última operación cae dentro del último minuto importado
+            var last = await feed.LastTradeTimeAsync(inst, CancellationToken.None);
+            var lastBar = DateTimeOffset.FromUnixTimeSeconds(bars[^1].Time).UtcDateTime;
+            Assert.NotNull(last);
+            Assert.InRange(last!.Value, lastBar, lastBar.AddMinutes(1));
+
+            // como en el gráfico: 3 horas de historia que terminan en la última vela (no «ahora», que no tiene datos)
+            var data = new InstrumentData(inst, feed);
+            data.Start(DateTime.UtcNow.AddHours(-3));
+            var until = DateTime.UtcNow.AddSeconds(15);
+            while (DateTime.UtcNow < until)
+            {
+                data.Pump();
+                if (!data.IsLoadingHistory) break;
+                await Task.Delay(20);
+            }
+
+            data.Stop();
+            Assert.False(data.IsLoadingHistory);
+            Assert.InRange(data.Trades.Count, 180 * 4, 181 * 4); // 4 operaciones por vela, unas 3 horas
+            Assert.Equal(bars[^1].C, data.LastPrice);
+            Assert.True(data.MarketClosed);
+        }
+        finally
+        {
+            dir.Delete(true);
+        }
+    }
 }
