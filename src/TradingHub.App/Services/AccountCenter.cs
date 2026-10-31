@@ -78,14 +78,14 @@ public sealed class AccountCenter
 
     public IReadOnlyList<AccountEntry> Accounts()
     {
-        var list = new List<AccountEntry> { new(SimId, "Cuenta simulada", AccountKind.Sim, false, true) };
+        var list = new List<AccountEntry> { new(SimId, L.T("Cuenta simulada"), AccountKind.Sim, false, true) };
         foreach (var p in _svc.Connections.Enabled.Where(p => p.IsRithmic && !string.IsNullOrWhiteSpace(p.RithmicUser)))
         {
             var session = _svc.RithmicSessionFor(p);
             foreach (var a in session.Accounts)
             {
                 bool real = !session.IsPractice;
-                list.Add(new AccountEntry(AppServices.RithmicAccountId(p, a.AccountId), $"{a.AccountId} · {p.Name}{(real ? " — REAL" : " (práctica)")}",
+                list.Add(new AccountEntry(AppServices.RithmicAccountId(p, a.AccountId), $"{a.AccountId} · {p.Name}{(real ? L.T(" — REAL") : L.T(" (práctica)"))}",
                     AccountKind.Rithmic, real, !real || p.AllowRealOrders, p, a.AccountId));
             }
         }
@@ -96,7 +96,7 @@ public sealed class AccountCenter
             foreach (var a in session.Accounts)
             {
                 bool real = !session.IsDemo;
-                list.Add(new AccountEntry(AppServices.TradovateAccountId(p, a.Id), $"{a.Name} · {p.Name}{(real ? " — REAL" : " (demo)")}",
+                list.Add(new AccountEntry(AppServices.TradovateAccountId(p, a.Id), $"{a.Name} · {p.Name}{(real ? L.T(" — REAL") : " (demo)")}",
                     AccountKind.Tradovate, real, !real || p.AllowRealOrders, p, a.Name));
             }
         }
@@ -141,9 +141,9 @@ public sealed class AccountCenter
 
     private static string TypeName(OrderTypes t) => t switch
     {
-        OrderTypes.Market => "Mercado",
+        OrderTypes.Market => L.T("Mercado"),
         OrderTypes.Stop => "Stop",
-        _ => "Límite",
+        _ => L.T("Límite"),
     };
 
     private void FillSim(AccountSnapshot s, decimal realizedToday)
@@ -161,13 +161,13 @@ public sealed class AccountCenter
                 decimal avg = qty > 0 ? fills.Sum(t => t.Price * t.Volume) / qty : 0;
                 bool active = o.State == OrderStates.Active;
                 string status = active
-                    ? o.Filled > 0 ? "Parcial" : "Activa"
+                    ? o.Filled > 0 ? L.T("Parcial") : L.T("Activa")
                     : o.Status switch
                     {
-                        OrderStatus.Filled => "Ejecutada",
-                        OrderStatus.Canceled => o.Filled > 0 ? "Cancelada (parcial)" : "Cancelada",
-                        OrderStatus.Rejected => "Rechazada",
-                        _ => o.State == OrderStates.Failed ? "Rechazada" : o.Filled > 0 ? "Ejecutada" : "Terminada",
+                        OrderStatus.Filled => L.T("Ejecutada"),
+                        OrderStatus.Canceled => o.Filled > 0 ? L.T("Cancelada (parcial)") : L.T("Cancelada"),
+                        OrderStatus.Rejected => L.T("Rechazada"),
+                        _ => o.State == OrderStates.Failed ? L.T("Rechazada") : o.Filled > 0 ? L.T("Ejecutada") : L.T("Terminada"),
                     };
                 s.Orders.Add(new OrderLine("sim|" + o.Id, o.Time, b.Instrument.Symbol, o.Direction == OrderDirections.Buy, TypeName(o.Type),
                     o.QuantityToFill, o.Type == OrderTypes.Stop ? o.TriggerPrice : o.Price, o.Filled, avg, status, active, (b, o)));
@@ -180,7 +180,7 @@ public sealed class AccountCenter
         s.Balance = s.StartBalance + s.Analysis.RealizedNet + s.OpenPnl;
         s.RealizedToday = realizedToday;
         s.DayPnl = realizedToday + s.OpenPnl;
-        s.Status = "Trading Hub simula las ejecuciones con el mercado real";
+        s.Status = L.T("Trading Hub simula las ejecuciones con el mercado real");
     }
 
     private void FillRithmic(AccountSnapshot s, decimal realizedToday)
@@ -188,18 +188,18 @@ public sealed class AccountCenter
         var session = _svc.RithmicSessionFor(s.Account.Profile!);
         string acc = s.Account.RithmicAccount;
         s.Connected = session.IsConnected;
-        s.Status = session.IsConnected ? $"Conectada a Rithmic ({session.System})" : session.StatusText;
+        s.Status = session.IsConnected ? L.F("Conectada a Rithmic ({0})",session.System) : session.StatusText;
         foreach (var (sym, ex, p) in session.PositionsOf(acc))
             s.Positions.Add(new PositionLine(sym + "|" + ex, sym, p.Net, p.AvgPrice, p.OpenPnl, p.ClosedPnl, (sym, ex)));
 
         foreach (var o in session.OrdersOf(acc))
         {
-            string type = o.PriceType switch { 2 => "Mercado", 3 => "Stop límite", 4 => "Stop", _ => "Límite" };
+            string type = o.PriceType switch { 2 => L.T("Mercado"), 3 => L.T("Stop límite"), 4 => "Stop", _ => L.T("Límite") };
             string status = !o.Done
-                ? o.Filled > 0 ? "Parcial" : "Activa"
-                : o.Rejected ? "Rechazada" + (o.Reason.Length > 0 ? ": " + o.Reason : "")
-                : o.Cancelled ? o.Filled > 0 ? "Cancelada (parcial)" : "Cancelada"
-                : "Ejecutada";
+                ? o.Filled > 0 ? L.T("Parcial") : L.T("Activa")
+                : o.Rejected ? L.T("Rechazada") + (o.Reason.Length > 0 ? ": " + o.Reason : "")
+                : o.Cancelled ? o.Filled > 0 ? L.T("Cancelada (parcial)") : L.T("Cancelada")
+                : L.T("Ejecutada");
             s.Orders.Add(new OrderLine(o.BasketId, o.Time, o.Symbol, o.IsBuy, type, o.Quantity, o.PriceType is 3 or 4 ? o.Trigger : o.Price,
                 o.Filled, o.AvgFillPrice, status, !o.Done, o));
         }
@@ -220,7 +220,7 @@ public sealed class AccountCenter
         var session = _svc.TradovateSessionFor(s.Account.Profile!);
         long acc = TradovateIdOf(s.Account);
         s.Connected = session.IsConnected;
-        s.Status = session.IsConnected ? $"Conectada a Tradovate ({(session.IsDemo ? "demo" : "real")})" : session.StatusText;
+        s.Status = session.IsConnected ? L.F("Conectada a Tradovate ({0})",(session.IsDemo ? L.T("demo") : L.T("real"))) : session.StatusText;
         foreach (var p in session.PositionsOf(acc))
         {
             decimal pv = PointValueOf(p.Symbol);
@@ -230,12 +230,12 @@ public sealed class AccountCenter
 
         foreach (var o in session.OrdersOf(acc))
         {
-            string type = o.Type switch { "Market" => "Mercado", "Stop" => "Stop", "StopLimit" => "Stop límite", "TrailingStop" => "Stop móvil", _ => "Límite" };
+            string type = o.Type switch { "Market" => L.T("Mercado"), "Stop" => "Stop", "StopLimit" => L.T("Stop límite"), "TrailingStop" => L.T("Stop móvil"), _ => L.T("Límite") };
             string status = !o.Done
-                ? o.Filled > 0 ? "Parcial" : "Activa"
-                : o.Rejected ? "Rechazada" + (o.Text.Length > 0 ? ": " + o.Text : "")
-                : o.Cancelled ? o.Filled > 0 ? "Cancelada (parcial)" : "Cancelada"
-                : "Ejecutada";
+                ? o.Filled > 0 ? L.T("Parcial") : L.T("Activa")
+                : o.Rejected ? L.T("Rechazada") + (o.Text.Length > 0 ? ": " + o.Text : "")
+                : o.Cancelled ? o.Filled > 0 ? L.T("Cancelada (parcial)") : L.T("Cancelada")
+                : L.T("Ejecutada");
             s.Orders.Add(new OrderLine("tv|" + o.Id, o.Time, o.Symbol, o.IsBuy, type, o.Quantity, o.Type is "Stop" or "StopLimit" ? o.StopPrice : o.Price,
                 o.Filled, o.AvgFill, status, !o.Done, o));
         }

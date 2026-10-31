@@ -3,4 +3,8 @@
     <RootNamespace>TradingHub</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- traducciones de la interfaz (clave = texto en español) -->
+    <EmbeddedResource Include="Localization\*.json" LogicalName="TradingHub.Localization.%(Filename).json" />
+  </ItemGroup>
 </Project>

@@ -132,7 +132,7 @@ internal sealed class SleepGuard : IDisposable
         try
         {
             type = CFStringCreateWithCString(IntPtr.Zero, "PreventUserIdleSystemSleep", Utf8);
-            name = CFStringCreateWithCString(IntPtr.Zero, "Trading Hub: " + reason, Utf8);
+            name = CFStringCreateWithCString(IntPtr.Zero, L.T("Trading Hub: ") + reason, Utf8);
             _held = IOPMAssertionCreateWithName(type, LevelOn, name, out _assertion) == 0;
         }
         catch (Exception ex)
@@ -177,13 +177,13 @@ internal sealed class SleepGuard : IDisposable
     {
         static string Q(string path) => "'" + path.Replace("'", "'\\''") + "'";
         string sh =
-            $"flag={Q(Flag)}; ac={Q(AcOnlyFlag)}; cur=x; " +
-            $"while kill -0 {pid} 2>/dev/null && [ -f \"$flag\" ]; do " +
-            "want=1; if [ -f \"$ac\" ] && ! /usr/bin/pmset -g ps | /usr/bin/head -1 | /usr/bin/grep -q 'AC Power'; then want=0; fi; " +
-            "if [ \"$want\" != \"$cur\" ]; then /usr/bin/pmset -a disablesleep $want; cur=$want; fi; " +
-            "sleep 5; done; /usr/bin/pmset -a disablesleep 0";
+            L.F("flag={0}; ac={1}; cur=x; ",Q(Flag),Q(AcOnlyFlag)) +
+            L.F("while kill -0 {0} 2>/dev/null && [ -f \"$flag\" ]; do ",pid) +
+            L.T("want=1; if [ -f \"$ac\" ] && ! /usr/bin/pmset -g ps | /usr/bin/head -1 | /usr/bin/grep -q 'AC Power'; then want=0; fi; ") +
+            L.T("if [ \"$want\" != \"$cur\" ]; then /usr/bin/pmset -a disablesleep $want; cur=$want; fi; ") +
+            L.T("sleep 5; done; /usr/bin/pmset -a disablesleep 0");
         string escaped = sh.Replace("\\", "\\\\").Replace("\"", "\\\"");
-        return $"do shell script \"{escaped}\" with prompt \"Trading Hub necesita tu permiso para que la Mac siga funcionando con la tapa cerrada mientras corren tus estrategias o los agentes. Se deshace solo al cerrar Trading Hub.\" with administrator privileges";
+        return L.F("do shell script \"{0}\" with prompt \"Trading Hub necesita tu permiso para que la Mac siga funcionando con la tapa cerrada mientras corren tus estrategias o los agentes. Se deshace solo al cerrar Trading Hub.\" with administrator privileges",escaped);
     }
 
     private void StartLidHelper()
@@ -210,7 +210,7 @@ internal sealed class SleepGuard : IDisposable
             p.Exited += (_, _) =>
             {
                 // terminó: o cancelaste el permiso (código distinto de 0) o se apagó el modo
-                if (p.ExitCode != 0) LidError = "No se activó: hace falta tu permiso de administrador.";
+                if (p.ExitCode != 0) LidError = L.T("No se activó: hace falta tu permiso de administrador.");
             };
         }
         catch (Exception ex)

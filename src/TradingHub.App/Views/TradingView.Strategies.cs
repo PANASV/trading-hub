@@ -81,7 +81,7 @@ public sealed partial class TradingView
         if (file.Type == null) await Task.Run(() => _svc.Strategies.Compile(file));
         if (file.Type == null)
         {
-            _status($"«{file.FileName}» tiene errores: arreglala en Estrategias antes de ponerla en el gráfico");
+            _status(L.F("«{0}» tiene errores: arreglala en Estrategias antes de ponerla en el gráfico",file.FileName));
             return;
         }
 
@@ -151,20 +151,20 @@ public sealed partial class TradingView
             var file = await StrategyFileAsync(cs.StrategyId);
             if (file?.Type == null)
             {
-                cs.Overlay.Error = file == null ? "no encuentro la estrategia" : "tiene errores";
+                cs.Overlay.Error = file == null ? L.T("no encuentro la estrategia") : L.T("tiene errores");
                 cs.Overlay.Status = cs.Overlay.Error;
                 return;
             }
 
             cs.Overlay.Name = file.DisplayName;
             var data = model.Data;
-            cs.Overlay.Status = "esperando la historia…";
+            cs.Overlay.Status = L.T("esperando la historia…");
             model.Invalidate();
             while (data.IsLoadingHistory && !cts.IsCancellationRequested) await Task.Delay(300);
             if (cts.IsCancellationRequested) return;
 
             // 1) lo histórico: backtest sobre lo que tiene cargado el gráfico
-            cs.Overlay.Status = "calculando…";
+            cs.Overlay.Status = L.T("calculando…");
             model.Invalidate();
             var ticks = TickData.FromStore(data.Trades);
             // con la comisión y el deslizamiento de ese mercado (los mismos del backtest): el resultado que habría dado de verdad
@@ -204,7 +204,7 @@ public sealed partial class TradingView
             // 2) en vivo
             if (cs.Live && cs.Paused)
             {
-                cs.Overlay.Status = "en vivo · pausada (abrí la configuración para reanudar)";
+                cs.Overlay.Status = L.T("en vivo · pausada (abrí la configuración para reanudar)");
                 cs.Overlay.Live = false;
                 // la posición que tiene abierta en la cuenta se dibuja igual mientras espera
                 cs.SavedLedger = _svc.Live.Entries().FirstOrDefault(e => ReferenceEquals(e.ChartStrategy, cs))?.Ledger;
@@ -222,9 +222,9 @@ public sealed partial class TradingView
             {
                 account = _svc.AccountFor(data, cs.AccountId);
                 if (account.IsReal && TopLevel.GetTopLevel(chart.Window ?? (Control)this) is Window w &&
-                    !await ConfirmDialog.ShowAsync(w, "Ejecutar en cuenta REAL",
-                        $"«{file.DisplayName}» va a operar {data.Instrument.Symbol} en {account.Name} con órdenes reales y sin confirmación individual. La detenés desde la leyenda del gráfico.",
-                        "Ejecutar con dinero real", danger: true))
+                    !await ConfirmDialog.ShowAsync(w, L.T("Ejecutar en cuenta REAL"),
+                        L.F("«{0}» va a operar {1} en {2} con órdenes reales y sin confirmación individual. La detenés desde la leyenda del gráfico.",file.DisplayName,data.Instrument.Symbol,account.Name),
+                        L.T("Ejecutar con dinero real"), danger: true))
                 {
                     cs.Live = false;
                     account = cs.Shadow = NewShadow(data);
@@ -271,7 +271,7 @@ public sealed partial class TradingView
             {
                 // en visual sigue desde donde quedó la historia: si el backtest terminó con una posición abierta, la
                 // simulada propia la abre y la estrategia la sigue gestionando (la salida se une a esa entrada)
-                shadow.Market(open.IsLong ? OrderDirections.Buy : OrderDirections.Sell, open.Quantity, "Posición de la historia");
+                shadow.Market(open.IsLong ? OrderDirections.Buy : OrderDirections.Sell, open.Quantity, L.T("Posición de la historia"));
                 if (shadow.Position?.Volume is { } v && v != 0)
                     runner.SeedPosition(new LiveFill(open.EntryTime, open.IsLong, open.Quantity, open.AveragePrice));
             }
@@ -288,7 +288,7 @@ public sealed partial class TradingView
 
             cs.Overlay.Live = cs.Live;
             cs.Overlay.Status = cs.Live ? LiveStatus(cs, runner) : "visual";
-            _status(cs.Live ? $"{file.DisplayName} ejecutando en {account.Name} sobre {data.Instrument.Symbol}" : $"{file.DisplayName} en el gráfico (solo visual)");
+            _status(cs.Live ? L.F("{0} ejecutando en {1} sobre {2}",file.DisplayName,account.Name,data.Instrument.Symbol) : L.F("{0} en el gráfico (solo visual)",file.DisplayName));
         }
         catch (OperationCanceledException)
         {
@@ -319,7 +319,7 @@ public sealed partial class TradingView
         chart.Model?.Strategies.Remove(cs.Overlay);
         chart.Model?.Invalidate();
         Workspace.Save(this);
-        _status(hadPosition ? $"{cs.Overlay.Name} detenida y quitada: la posición abierta queda como está (cerrala desde el Chart Trader si querés)" : $"{cs.Overlay.Name} quitada del gráfico");
+        _status(hadPosition ? L.F("{0} detenida y quitada: la posición abierta queda como está (cerrala desde el Chart Trader si querés)",cs.Overlay.Name) : L.F("{0} quitada del gráfico",cs.Overlay.Name));
     }
 
     /// <summary>Cambió el período o el instrumento: las visuales se recalculan; las que ejecutan se pausan si cambió el instrumento.</summary>
@@ -465,8 +465,8 @@ public sealed partial class TradingView
     private string LiveStatus(ChartStrategy cs, LiveStrategyRunner runner)
     {
         decimal units = runner.UnitsFor(LiveCenter.QuantityOf(runner.StrategyInstance.GetParameters()));
-        string each = units > 0 ? $"{units.ToString("0.####", CultureInfo.GetCultureInfo("es-AR"))} {runner.ExecInstrument.Symbol} por orden" : "tamaño en cero";
-        return $"en vivo · {runner.Account.Name} · {each}";
+        string each = units > 0 ? L.F("{0} {1} por orden",units.ToString("0.####", TradingHub.Common.Loc.Culture),runner.ExecInstrument.Symbol) : L.T("tamaño en cero");
+        return L.F("en vivo · {0} · {1}",runner.Account.Name,each);
     }
 
     /// <summary>Posición abierta: línea punteada de la entrada al precio actual, del color del resultado abierto.</summary>
@@ -525,13 +525,13 @@ public sealed partial class TradingView
             items.Add(mi);
         }
 
-        if (items.Count == 0) items.Add(new MenuItem { Header = "Todavía no hay estrategias: creá una en Estrategias", IsEnabled = false });
+        if (items.Count == 0) items.Add(new MenuItem { Header = L.T("Todavía no hay estrategias: creá una en Estrategias"), IsEnabled = false });
         if (tab.Strategies.Count > 0)
         {
             items.Add(new Separator());
             foreach (var cs in tab.Strategies.ToList())
             {
-                var mi = new MenuItem { Header = $"Configurar «{cs.Overlay.Name}» · {cs.Overlay.Status}", Icon = Ui.Icon(Material.Icons.MaterialIconKind.CogOutline, 16) };
+                var mi = new MenuItem { Header = L.F("Configurar «{0}» · {1}",cs.Overlay.Name,cs.Overlay.Status), Icon = Ui.Icon(Material.Icons.MaterialIconKind.CogOutline, 16) };
                 mi.Click += (_, _) => OpenStrategySettings(tab, cs);
                 items.Add(mi);
             }

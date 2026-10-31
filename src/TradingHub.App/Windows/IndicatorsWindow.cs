@@ -15,7 +15,7 @@ public sealed class IndicatorsWindow : Window
 {
     private readonly AppServices _svc;
     private readonly ChartModel _model;
-    private readonly TextBox _search = new() { Watermark = "Buscar por nombre o categoría…" };
+    private readonly TextBox _search = new() { Watermark = L.T("Buscar por nombre o categoría…") };
     private readonly ListBox _available = new();
     private readonly ListBox _onChart = new();
     private readonly PropertyGrid _grid = new();
@@ -30,7 +30,7 @@ public sealed class IndicatorsWindow : Window
     {
         _svc = svc;
         _model = model;
-        Title = $"Indicadores — {model.Title}";
+        Title = L.F("Indicadores — {0}",model.Title);
         Width = 1120;
         Height = 720;
         MinWidth = 900;
@@ -40,7 +40,7 @@ public sealed class IndicatorsWindow : Window
 
         _emptyState = Ui.V(8,
             Ui.Icon(MaterialIconKind.TuneVariant, 34, Ui.Text2),
-            new TextBlock { Text = "Elegí un indicador del gráfico para configurarlo", Classes = { "muted" }, HorizontalAlignment = HorizontalAlignment.Center });
+            new TextBlock { Text = L.T("Elegí un indicador del gráfico para configurarlo"), Classes = { "muted" }, HorizontalAlignment = HorizontalAlignment.Center });
         _emptyState.HorizontalAlignment = HorizontalAlignment.Center;
         _emptyState.VerticalAlignment = VerticalAlignment.Center;
         ((StackPanel)_emptyState).Children[0].HorizontalAlignment = HorizontalAlignment.Center;
@@ -61,17 +61,17 @@ public sealed class IndicatorsWindow : Window
         // ---- biblioteca
         var left = new DockPanel();
         var libHeader = new DockPanel { Margin = new Thickness(0, 0, 0, 10) };
-        var code = Ui.IconButton(MaterialIconKind.CodeBraces, "Escribir un indicador propio en C# (editor)", () => new CodeEditorWindow(_svc, CodeKind.Indicator).Show(this), 17);
+        var code = Ui.IconButton(MaterialIconKind.CodeBraces, L.T("Escribir un indicador propio en C# (editor)"), () => new CodeEditorWindow(_svc, CodeKind.Indicator).Show(this), 17);
         DockPanel.SetDock(code, Dock.Right);
         libHeader.Children.Add(code);
-        libHeader.Children.Add(Ui.H(8, Ui.H3("Biblioteca"), _count));
+        libHeader.Children.Add(Ui.H(8, Ui.H3(L.T("Biblioteca")), _count));
         DockPanel.SetDock(libHeader, Dock.Top);
         left.Children.Add(libHeader);
         _search.InnerLeftContent = Ui.Icon(MaterialIconKind.Magnify, 16, Ui.Text2);
         ((Control)_search.InnerLeftContent).Margin = new Thickness(8, 0, 0, 0);
         DockPanel.SetDock(_search, Dock.Top);
         left.Children.Add(_search);
-        var add = Ui.Button("Agregar al gráfico", MaterialIconKind.Plus, AddSelected, "primary");
+        var add = Ui.Button(L.T("Agregar al gráfico"), MaterialIconKind.Plus, AddSelected, "primary");
         add.HorizontalAlignment = HorizontalAlignment.Stretch;
         add.HorizontalContentAlignment = HorizontalAlignment.Center;
         add.Margin = new Thickness(0, 10, 0, 0);
@@ -86,25 +86,25 @@ public sealed class IndicatorsWindow : Window
         var mid = new DockPanel();
         var midHeader = new DockPanel { Margin = new Thickness(0, 0, 0, 10) };
         var tools = Ui.H(2,
-            Ui.IconButton(MaterialIconKind.EyeOutline, "Mostrar / ocultar", () => WithSelected(s =>
+            Ui.IconButton(MaterialIconKind.EyeOutline, L.T("Mostrar / ocultar"), () => WithSelected(s =>
             {
                 s.Visible = !s.Visible;
                 _model.Invalidate();
             }), 17),
-            Ui.IconButton(MaterialIconKind.DockBottom, "Pasar entre el gráfico de precio y un panel propio", () => WithSelected(s =>
+            Ui.IconButton(MaterialIconKind.DockBottom, L.T("Pasar entre el gráfico de precio y un panel propio"), () => WithSelected(s =>
             {
                 if (s.Indicator.DenyToChangePanel) return;
                 _model.MoveToPanel(s, s.Panel == null ? new SubPanel() : null);
                 _model.Invalidate();
             }), 17),
-            Ui.IconButton(MaterialIconKind.DeleteOutline, "Quitar del gráfico", () => WithSelected(s =>
+            Ui.IconButton(MaterialIconKind.DeleteOutline, L.T("Quitar del gráfico"), () => WithSelected(s =>
             {
                 _model.RemoveIndicator(s);
                 _grid.Target = null;
             }), 17));
         DockPanel.SetDock(tools, Dock.Right);
         midHeader.Children.Add(tools);
-        midHeader.Children.Add(Ui.H3("En el gráfico"));
+        midHeader.Children.Add(Ui.H3(L.T("En el gráfico")));
         DockPanel.SetDock(midHeader, Dock.Top);
         mid.Children.Add(midHeader);
         _onChart.SelectionChanged += (_, _) => SelectSlot();
@@ -113,11 +113,11 @@ public sealed class IndicatorsWindow : Window
         grid.Children.Add(mid);
 
         // ---- configuración (con sus plantillas)
-        _templates.Content = Ui.H(6, Ui.Icon(MaterialIconKind.BookmarkMultipleOutline, 15), new TextBlock { Text = "Plantillas", VerticalAlignment = VerticalAlignment.Center });
+        _templates.Content = Ui.H(6, Ui.Icon(MaterialIconKind.BookmarkMultipleOutline, 15), new TextBlock { Text = L.T("Plantillas"), VerticalAlignment = VerticalAlignment.Center });
         _templates.Padding = new Thickness(9, 3);
         _templates.MinHeight = 26;
         _templates.IsVisible = false;
-        ToolTip.SetTip(_templates, "Guardar estos ajustes como plantilla, aplicar una guardada o elegir con cuál arrancan los nuevos");
+        ToolTip.SetTip(_templates, L.T("Guardar estos ajustes como plantilla, aplicar una guardada o elegir con cuál arrancan los nuevos"));
         _templates.Click += (_, _) => ShowTemplates();
         var titleRow = new DockPanel();
         DockPanel.SetDock(_templates, Dock.Right);
@@ -158,7 +158,7 @@ public sealed class IndicatorsWindow : Window
                 // sin etiqueta de origen para los de la biblioteca (Trading Hub y los técnicos); solo los tuyos y los extra
                 if (i.Source != "Trading Hub" && i.Source != "Técnicos")
                 {
-                    string tag = i.Source == UserScripts.Source ? "propio" : "extra";
+                    string tag = i.Source == UserScripts.Source ? L.T("propio") : L.T("extra");
                     var badge = new Border { Child = new TextBlock { Text = tag, FontSize = 10 }, Classes = { "pill" }, Padding = new Thickness(6, 1) };
                     DockPanel.SetDock(badge, Dock.Right);
                     row.Children.Add(badge);
@@ -179,7 +179,7 @@ public sealed class IndicatorsWindow : Window
         {
             var icon = Ui.Icon(s.Visible ? MaterialIconKind.Eye : MaterialIconKind.EyeOffOutline, 15, s.Visible ? Ui.Text1 : Ui.Text2);
             var name = new TextBlock { Text = s.Indicator.Name, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, Opacity = s.Visible ? 1 : 0.55 };
-            var where = new TextBlock { Text = s.Panel == null ? "precio" : "panel", Classes = { "faint", "small" }, VerticalAlignment = VerticalAlignment.Center };
+            var where = new TextBlock { Text = s.Panel == null ? L.T("precio") : L.T("panel"), Classes = { "faint", "small" }, VerticalAlignment = VerticalAlignment.Center };
             var row = new DockPanel();
             var right = Ui.H(6, where);
             if (s.Error != null) right.Children.Insert(0, Ui.Icon(MaterialIconKind.AlertCircleOutline, 15, Ui.Down));
@@ -193,7 +193,7 @@ public sealed class IndicatorsWindow : Window
         }
 
         if (_model.Indicators.Count == 0)
-            _onChart.Items.Add(new ListBoxItem { Content = new TextBlock { Text = "Sin indicadores. Elegí uno de la biblioteca y tocá Agregar.", Classes = { "muted", "small" }, TextWrapping = TextWrapping.Wrap }, IsEnabled = false });
+            _onChart.Items.Add(new ListBoxItem { Content = new TextBlock { Text = L.T("Sin indicadores. Elegí uno de la biblioteca y tocá Agregar."), Classes = { "muted", "small" }, TextWrapping = TextWrapping.Wrap }, IsEnabled = false });
     }
 
     private void AddSelected()
@@ -210,7 +210,7 @@ public sealed class IndicatorsWindow : Window
         }
         catch (Exception ex)
         {
-            _errorText.Text = $"No se pudo crear {info.Name}: {ex.InnerException?.Message ?? ex.Message}";
+            _errorText.Text = L.F("No se pudo crear {0}: {1}",info.Name,ex.InnerException?.Message ?? ex.Message);
             _errorText.IsVisible = true;
         }
     }
@@ -226,38 +226,38 @@ public sealed class IndicatorsWindow : Window
         _svc.Settings.DefaultIndicatorTemplates.TryGetValue(key, out var def);
         var flyout = new MenuFlyout { Placement = PlacementMode.BottomEdgeAlignedRight };
 
-        var save = new MenuItem { Header = "Guardar estos ajustes como plantilla…", Icon = Ui.Icon(MaterialIconKind.ContentSaveOutline, 16) };
+        var save = new MenuItem { Header = L.T("Guardar estos ajustes como plantilla…"), Icon = Ui.Icon(MaterialIconKind.ContentSaveOutline, 16) };
         save.Click += async (_, _) =>
         {
-            var name = await PromptDialog.ShowAsync(this, $"Plantilla de {ind.Name}", "Nombre de la plantilla (guarda todos sus ajustes y colores)", def ?? ind.Name, "Guardar");
+            var name = await PromptDialog.ShowAsync(this, L.F("Plantilla de {0}",ind.Name), L.T("Nombre de la plantilla (guarda todos sus ajustes y colores)"), def ?? ind.Name, L.T("Guardar"));
             if (string.IsNullOrWhiteSpace(name)) return;
             Workspace.SaveIndicatorTemplate(ind, name);
-            _subtitle.Text = $"Plantilla «{name.Trim()}» guardada";
+            _subtitle.Text = L.F("Plantilla «{0}» guardada",name.Trim());
         };
         flyout.Items.Add(save);
         if (names.Count == 0)
         {
-            flyout.Items.Add(new MenuItem { Header = "Todavía no hay plantillas de este indicador", IsEnabled = false });
+            flyout.Items.Add(new MenuItem { Header = L.T("Todavía no hay plantillas de este indicador"), IsEnabled = false });
         }
         else
         {
             flyout.Items.Add(new Separator());
             foreach (var n in names)
             {
-                var apply = new MenuItem { Header = n == def ? $"{n}  · predeterminada" : n, Icon = Ui.Icon(MaterialIconKind.BookmarkOutline, 16) };
+                var apply = new MenuItem { Header = n == def ? L.F("{0}  · predeterminada",n) : n, Icon = Ui.Icon(MaterialIconKind.BookmarkOutline, 16) };
                 apply.Click += (_, _) =>
                 {
                     if (!Workspace.ApplyIndicatorTemplate(ind, n)) return;
                     _grid.Target = null;
                     _grid.Target = ind;
                     _model.Invalidate();
-                    _subtitle.Text = $"Plantilla «{n}» aplicada";
+                    _subtitle.Text = L.F("Plantilla «{0}» aplicada",n);
                 };
                 flyout.Items.Add(apply);
             }
 
             flyout.Items.Add(new Separator());
-            var forNew = new MenuItem { Header = "Con cuál arrancan los nuevos", Icon = Ui.Icon(MaterialIconKind.StarOutline, 16) };
+            var forNew = new MenuItem { Header = L.T("Con cuál arrancan los nuevos"), Icon = Ui.Icon(MaterialIconKind.StarOutline, 16) };
             MenuItem Choice(string header, string? value)
             {
                 var mi = new MenuItem { Header = header, Icon = value == def ? Ui.Icon(MaterialIconKind.Check, 15, Ui.Accent) : null };
@@ -266,16 +266,16 @@ public sealed class IndicatorsWindow : Window
                     if (value == null) _svc.Settings.DefaultIndicatorTemplates.Remove(key);
                     else _svc.Settings.DefaultIndicatorTemplates[key] = value;
                     _svc.Settings.Save();
-                    _subtitle.Text = value == null ? "Los nuevos arrancan con los ajustes de fábrica" : $"Los nuevos {ind.Name} arrancan con «{value}»";
+                    _subtitle.Text = value == null ? L.T("Los nuevos arrancan con los ajustes de fábrica") : L.F("Los nuevos {0} arrancan con «{1}»",ind.Name,value);
                 };
                 return mi;
             }
 
-            forNew.Items.Add(Choice("Ajustes de fábrica", null));
+            forNew.Items.Add(Choice(L.T("Ajustes de fábrica"), null));
             foreach (var n in names) forNew.Items.Add(Choice(n, n));
             flyout.Items.Add(forNew);
 
-            var delete = new MenuItem { Header = "Borrar una plantilla", Icon = Ui.Icon(MaterialIconKind.DeleteOutline, 16) };
+            var delete = new MenuItem { Header = L.T("Borrar una plantilla"), Icon = Ui.Icon(MaterialIconKind.DeleteOutline, 16) };
             foreach (var n in names)
             {
                 var mi = new MenuItem { Header = n };
@@ -288,7 +288,7 @@ public sealed class IndicatorsWindow : Window
                         _svc.Settings.Save();
                     }
 
-                    _subtitle.Text = $"Plantilla «{n}» borrada";
+                    _subtitle.Text = L.F("Plantilla «{0}» borrada",n);
                 };
                 delete.Items.Add(mi);
             }
@@ -322,7 +322,7 @@ public sealed class IndicatorsWindow : Window
         _title.Text = s.Indicator.Name;
         var info = _svc.Catalog.Find(s.Indicator.GetType().FullName!);
         _subtitle.Text = string.Join(" · ", new[] { info?.Category, info?.Description }.Where(x => !string.IsNullOrWhiteSpace(x)));
-        _errorText.Text = s.Error != null ? "Error: " + s.Error : "";
+        _errorText.Text = s.Error != null ? L.T("Error: ") + s.Error : "";
         _errorText.IsVisible = s.Error != null;
         _grid.Target = s.Indicator;
     }

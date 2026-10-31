@@ -57,7 +57,7 @@ internal static class ReportExport
                 CloseList();
                 var path = Path.Combine(basePath, Uri.UnescapeDataString(img.Groups[2].Value));
                 if (File.Exists(path))
-                    body.AppendLine($"<figure><img alt=\"{WebUtility.HtmlEncode(img.Groups[1].Value)}\" src=\"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(path))}\"/></figure>");
+                    body.AppendLine(L.F("<figure><img alt=\"{0}\" src=\"data:image/png;base64,{1}\"/></figure>",WebUtility.HtmlEncode(img.Groups[1].Value),Convert.ToBase64String(File.ReadAllBytes(path))));
                 continue;
             }
 
@@ -97,7 +97,7 @@ internal static class ReportExport
             {
                 CloseList();
                 int level = Math.Min(4, t.TakeWhile(c => c == '#').Count());
-                body.AppendLine($"<h{level}>{InlineHtml(t[level..].Trim().TrimStart('#').Trim())}</h{level}>");
+                body.AppendLine(L.F("<h{0}>{1}</h{2}>",level,InlineHtml(t[level..].Trim().TrimStart('#').Trim()),level));
                 continue;
             }
 
@@ -107,7 +107,7 @@ internal static class ReportExport
                 var quote = new List<string>();
                 for (; i < lines.Length && lines[i].Trim().StartsWith('>'); i++) quote.Add(lines[i].Trim().TrimStart('>').Trim());
                 i--;
-                body.AppendLine($"<blockquote>{InlineHtml(string.Join(" ", quote))}</blockquote>");
+                body.AppendLine(L.F("<blockquote>{0}</blockquote>",InlineHtml(string.Join(" ", quote))));
                 continue;
             }
 
@@ -120,39 +120,16 @@ internal static class ReportExport
                     inList = true;
                 }
 
-                body.AppendLine($"<li>{InlineHtml(bullet.Groups[2].Value)}</li>");
+                body.AppendLine(L.F("<li>{0}</li>",InlineHtml(bullet.Groups[2].Value)));
                 continue;
             }
 
             CloseList();
-            body.AppendLine($"<p>{InlineHtml(t)}</p>");
+            body.AppendLine(L.F("<p>{0}</p>",InlineHtml(t)));
         }
 
         CloseList();
-        return $$"""
-            <!doctype html>
-            <html lang="es"><head><meta charset="utf-8"><title>{{WebUtility.HtmlEncode(title)}}</title>
-            <style>
-            @page { size: A4; margin: 16mm 14mm; }
-            body { font-family: -apple-system, "Helvetica Neue", "Segoe UI", Arial, sans-serif; color: #22262e; max-width: 980px; margin: 32px auto; padding: 0 28px; line-height: 1.5; font-size: 14px; }
-            h1 { font-size: 28px; margin: 0 0 12px; letter-spacing: -0.3px; }
-            h2 { font-size: 19px; margin: 34px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #f2b53a; page-break-after: avoid; }
-            h3 { font-size: 15px; margin: 22px 0 8px; page-break-after: avoid; }
-            blockquote { margin: 10px 0; padding: 10px 14px; background: #fff8e6; border-left: 4px solid #d69614; color: #4b5161; }
-            table { border-collapse: collapse; margin: 8px 0 16px; font-size: 12.5px; page-break-inside: avoid; }
-            th { background: #eef1f6; text-align: left; font-weight: 600; }
-            th, td { padding: 6px 12px; border-bottom: 1px solid #e3e6ec; }
-            tr:nth-child(even) td { background: #fafbfc; }
-            td.n { text-align: right; font-variant-numeric: tabular-nums; }
-            figure { margin: 10px 0 18px; page-break-inside: avoid; }
-            figure img { width: 100%; border: 1px solid #e3e6ec; border-radius: 8px; }
-            code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-family: Menlo, Consolas, monospace; font-size: 12px; }
-            hr { border: 0; border-top: 1px solid #e3e6ec; margin: 28px 0; }
-            ul { padding-left: 22px; }
-            </style></head><body>
-            {{body}}
-            </body></html>
-            """;
+        return L.F("<!doctype html>\n<html lang=\"es\"><head><meta charset=\"utf-8\"><title>{0}</title>\n<style>\n@page {{ size: A4; margin: 16mm 14mm; }}\nbody {{ font-family: -apple-system, \"Helvetica Neue\", \"Segoe UI\", Arial, sans-serif; color: #22262e; max-width: 980px; margin: 32px auto; padding: 0 28px; line-height: 1.5; font-size: 14px; }}\nh1 {{ font-size: 28px; margin: 0 0 12px; letter-spacing: -0.3px; }}\nh2 {{ font-size: 19px; margin: 34px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #f2b53a; page-break-after: avoid; }}\nh3 {{ font-size: 15px; margin: 22px 0 8px; page-break-after: avoid; }}\nblockquote {{ margin: 10px 0; padding: 10px 14px; background: #fff8e6; border-left: 4px solid #d69614; color: #4b5161; }}\ntable {{ border-collapse: collapse; margin: 8px 0 16px; font-size: 12.5px; page-break-inside: avoid; }}\nth {{ background: #eef1f6; text-align: left; font-weight: 600; }}\nth, td {{ padding: 6px 12px; border-bottom: 1px solid #e3e6ec; }}\ntr:nth-child(even) td {{ background: #fafbfc; }}\ntd.n {{ text-align: right; font-variant-numeric: tabular-nums; }}\nfigure {{ margin: 10px 0 18px; page-break-inside: avoid; }}\nfigure img {{ width: 100%; border: 1px solid #e3e6ec; border-radius: 8px; }}\ncode {{ background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-family: Menlo, Consolas, monospace; font-size: 12px; }}\nhr {{ border: 0; border-top: 1px solid #e3e6ec; margin: 28px 0; }}\nul {{ padding-left: 22px; }}\n</style></head><body>\n{1}\n</body></html>",WebUtility.HtmlEncode(title),body);
     }
 
     /// <summary>Escribe el HTML al lado del reporte y devuelve su ruta.</summary>

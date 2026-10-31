@@ -16,7 +16,7 @@ internal sealed partial class StrategiesView
     private readonly MarkdownView _reportView = new();
     private readonly TextBlock _reportEmpty = new()
     {
-        Text = "Todavía no hay reportes. En Código, activá «Laboratorio» en el panel de Claude y pedile que investigue y optimice una estrategia: al terminar guarda el reporte acá.",
+        Text = L.T("Todavía no hay reportes. En Código, activá «Laboratorio» en el panel de Claude y pedile que investigue y optimice una estrategia: al terminar guarda el reporte acá."),
         Classes = { "muted" },
         TextWrapping = TextWrapping.Wrap,
         MaxWidth = 460,
@@ -35,11 +35,11 @@ internal sealed partial class StrategiesView
         {
             var html = ReportExport.Export(_report);
             Windows.Shell.Open(html);
-            _status($"Informe exportado: {System.IO.Path.GetFileName(html)} (en el navegador: {(Os.IsWindows ? "Ctrl+P → Guardar como PDF" : "Archivo → Exportar como PDF")})");
+            _status(L.F("Informe exportado: {0} (en el navegador: {1})",System.IO.Path.GetFileName(html),(Os.IsWindows ? L.T("Ctrl+P → Guardar como PDF") : L.T("Archivo → Exportar como PDF"))));
         }
         catch (Exception ex)
         {
-            _status("No se pudo exportar: " + ex.Message);
+            _status(L.T("No se pudo exportar: ") + ex.Message);
         }
     }
 
@@ -75,8 +75,8 @@ internal sealed partial class StrategiesView
         };
 
         _reportView.Paper = true;
-        var refresh = Ui.IconButton(MaterialIconKind.Refresh, "Actualizar", RefreshReports, 16);
-        var folder = Ui.IconButton(MaterialIconKind.FolderOpenOutline, "Abrir la carpeta de reportes", () =>
+        var refresh = Ui.IconButton(MaterialIconKind.Refresh, L.T("Actualizar"), RefreshReports, 16);
+        var folder = Ui.IconButton(MaterialIconKind.FolderOpenOutline, L.T("Abrir la carpeta de reportes"), () =>
         {
             System.IO.Directory.CreateDirectory(AppPaths.Reports);
             Windows.Shell.OpenFolder(AppPaths.Reports);
@@ -85,7 +85,7 @@ internal sealed partial class StrategiesView
         var tools = Ui.H(4, refresh, folder);
         DockPanel.SetDock(tools, Dock.Right);
         head.Children.Add(tools);
-        head.Children.Add(Ui.H3("Reportes del laboratorio"));
+        head.Children.Add(Ui.H3(L.T("Reportes del laboratorio")));
         var left = new DockPanel();
         DockPanel.SetDock(head, Dock.Top);
         left.Children.Add(head);
@@ -103,11 +103,11 @@ internal sealed partial class StrategiesView
             HorizontalAlignment = HorizontalAlignment.Center,
             BoxShadow = BoxShadows.Parse("0 6 28 0 #66000000"),
         };
-        var export = Ui.Button("Exportar PDF / HTML", MaterialIconKind.FileExportOutline, ExportReport, "primary");
+        var export = Ui.Button(L.T("Exportar PDF / HTML"), MaterialIconKind.FileExportOutline, ExportReport, "primary");
         ToolTip.SetTip(export, Os.IsWindows
-            ? "Guarda el informe como HTML con los gráficos incluidos y lo abre en el navegador (desde ahí: Ctrl+P → Guardar como PDF, o Imprimir)"
-            : "Guarda el informe como HTML con los gráficos incluidos y lo abre en el navegador (desde ahí: Archivo → Exportar como PDF o Imprimir)");
-        var finder = Ui.Button(Os.IsWindows ? "Mostrar en el Explorador" : "Mostrar en Finder", MaterialIconKind.FolderOutline, () =>
+            ? L.T("Guarda el informe como HTML con los gráficos incluidos y lo abre en el navegador (desde ahí: Ctrl+P → Guardar como PDF, o Imprimir)")
+            : L.T("Guarda el informe como HTML con los gráficos incluidos y lo abre en el navegador (desde ahí: Archivo → Exportar como PDF o Imprimir)"));
+        var finder = Ui.Button(Os.IsWindows ? L.T("Mostrar en el Explorador") : L.T("Mostrar en Finder"), MaterialIconKind.FolderOutline, () =>
         {
             if (_report != null) Windows.Shell.Reveal(_report.Path);
         });
@@ -172,7 +172,7 @@ internal sealed partial class StrategiesView
         }
         catch (Exception ex)
         {
-            _reportView.Markdown = "No se pudo leer el reporte: " + ex.Message;
+            _reportView.Markdown = L.T("No se pudo leer el reporte: ") + ex.Message;
         }
 
         _reportEmpty.IsVisible = false;

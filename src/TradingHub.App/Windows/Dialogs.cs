@@ -54,7 +54,7 @@ internal sealed class ConfirmDialog : TradingHubDialog<bool>
         icon.Margin = new Thickness(0, 2, 14, 0);
         body.Children.Add(icon);
         body.Children.Add(text);
-        var cancel = new Button { Content = "Cancelar", IsCancel = true };
+        var cancel = new Button { Content = L.T("Cancelar"), IsCancel = true };
         cancel.Click += (_, _) => Close(false);
         var ok = new Button { Content = okText, IsDefault = true }.Classes(danger ? "danger" : "primary");
         ok.Click += (_, _) => Close(true);
@@ -76,7 +76,7 @@ internal sealed class PromptDialog : TradingHubDialog<string?>
             box.Focus();
             box.SelectAll();
         };
-        var cancel = new Button { Content = "Cancelar", IsCancel = true };
+        var cancel = new Button { Content = L.T("Cancelar"), IsCancel = true };
         cancel.Click += (_, _) => Close(null);
         var ok = new Button { Content = okText, IsDefault = true }.Classes("primary");
         ok.Click += (_, _) => Close(string.IsNullOrWhiteSpace(box.Text) ? null : box.Text.Trim());

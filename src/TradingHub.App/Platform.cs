@@ -14,10 +14,10 @@ internal static class Os
     public static string Device => IsWindows ? "PC" : "Mac";
 
     /// <summary>Dónde quedan las claves: «el Llavero» o «el Administrador de credenciales».</summary>
-    public static string SecretStore => IsWindows ? "el Administrador de credenciales" : "el Llavero";
+    public static string SecretStore => IsWindows ? L.T("el Administrador de credenciales") : L.T("el Llavero");
 
     /// <summary>Lo mismo, corto (para los campos de texto): «el Llavero» o «Windows».</summary>
-    public static string SecretStoreShort => IsWindows ? "Windows" : "el Llavero";
+    public static string SecretStoreShort => IsWindows ? "Windows" : L.T("el Llavero");
 }
 
 /// <summary>

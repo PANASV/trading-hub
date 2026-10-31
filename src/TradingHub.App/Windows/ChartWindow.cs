@@ -28,7 +28,7 @@ internal sealed class ChartWindow : Window
         Background = Ui.Bg0;
         Icon = AppIcon.Window;
 
-        var dock = Ui.IconButton(MaterialIconKind.DockWindow, "Volver a la ventana principal", () => _host.DockBack(this));
+        var dock = Ui.IconButton(MaterialIconKind.DockWindow, L.T("Volver a la ventana principal"), () => _host.DockBack(this));
         Toolbar = new ChartToolbar(host, true, dock) { Chart = chart };
         DockPanel.SetDock(Toolbar, Dock.Top);
         _content.Children.Add(Toolbar);
@@ -66,7 +66,7 @@ internal sealed class ChartWindow : Window
     /// <summary>True si el gráfico volvió a la ventana principal (al cerrar no se descarta).</summary>
     public bool Released { get; private set; }
 
-    public void UpdateTitle() => Title = $"Trading Hub — {Chart.Caption}";
+    public void UpdateTitle() => Title = L.F("Trading Hub — {0}",Chart.Caption);
 
     /// <summary>Suelta el marco del gráfico para que vuelva a una pestaña.</summary>
     public void ReleaseChart()

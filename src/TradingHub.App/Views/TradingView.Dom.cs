@@ -24,8 +24,8 @@ public sealed partial class TradingView
     private static string PanelName(string key) => key switch
     {
         "dom" => "DOM",
-        "tape" => "Cinta de operaciones",
-        _ => "Chart Trader",
+        "tape" => L.T("Cinta de operaciones"),
+        _ => L.T("Chart Trader"),
     };
 
     private Control? SectionOf(string key) => key switch
@@ -37,7 +37,7 @@ public sealed partial class TradingView
 
     private Button BuildDetachButton(string key)
     {
-        var b = Ui.IconButton(MaterialIconKind.OpenInNew, $"Sacar {Article(key)} a una ventana aparte", () =>
+        var b = Ui.IconButton(MaterialIconKind.OpenInNew, L.F("Sacar {0} a una ventana aparte",Article(key)), () =>
         {
             if (_panelWindows.ContainsKey(key)) DockSection(key);
             else DetachSection(key);
@@ -46,14 +46,14 @@ public sealed partial class TradingView
         return b;
     }
 
-    private static string Article(string key) => key == "tape" ? "la cinta" : key == "dom" ? "el DOM" : "el Chart Trader";
+    private static string Article(string key) => key == "tape" ? L.T("la cinta") : key == "dom" ? L.T("el DOM") : L.T("el Chart Trader");
 
     private void UpdateDetachButton(string key)
     {
         if (!_detachButtons.TryGetValue(key, out var b)) return;
         bool floating = _panelWindows.ContainsKey(key);
         b.Content = Ui.Icon(floating ? MaterialIconKind.DockRight : MaterialIconKind.OpenInNew, 15);
-        ToolTip.SetTip(b, floating ? $"Volver a poner {Article(key)} en el panel derecho" : $"Sacar {Article(key)} a una ventana aparte");
+        ToolTip.SetTip(b, floating ? L.F("Volver a poner {0} en el panel derecho",Article(key)) : L.F("Sacar {0} a una ventana aparte",Article(key)));
     }
 
     /// <summary>Dónde y de qué tamaño estaba la ventana de una sección (el DOM trae lo de la versión anterior).</summary>
@@ -121,7 +121,7 @@ public sealed partial class TradingView
         UpdateDetachButton(key);
         ApplyPanelVisibility();
         w.Show(owner);
-        _status($"{PanelName(key)} en una ventana aparte: sigue al gráfico activo y, al cerrar la ventana, vuelve al panel derecho.");
+        _status(L.F("{0} en una ventana aparte: sigue al gráfico activo y, al cerrar la ventana, vuelve al panel derecho.",PanelName(key)));
     }
 
     private void SaveWindowBounds(string key, Window w)

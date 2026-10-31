@@ -157,7 +157,7 @@ public sealed class MarkdownView : UserControl
             {
                 string mark = char.IsDigit(bullet.Groups[1].Value[0]) ? bullet.Groups[1].Value : "•";
                 int indent = line.TakeWhile(c => c == ' ').Count() / 2;
-                var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), Margin = new Thickness(indent * 18, 0, 0, 0) };
+                var row = new Grid { ColumnDefinitions = new ColumnDefinitions(L.T("Auto,*")), Margin = new Thickness(indent * 18, 0, 0, 0) };
                 var m = new TextBlock { Text = mark, Width = 22, Foreground = _accent, FontSize = 13.5 };
                 var body = Text(bullet.Groups[2].Value, 13.5, FontWeight.Normal);
                 Grid.SetColumn(body, 1);

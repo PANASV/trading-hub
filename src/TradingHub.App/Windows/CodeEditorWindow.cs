@@ -30,7 +30,7 @@ internal sealed class CodeEditorWindow : Window
     public CodeEditorWindow(AppServices svc, CodeKind kind)
     {
         _svc = svc;
-        Title = "Indicadores propios — editor";
+        Title = L.T("Indicadores propios — editor");
         Width = 1180;
         Height = 780;
         MinWidth = 820;
@@ -54,13 +54,13 @@ internal sealed class CodeEditorWindow : Window
 
     private Control Build()
     {
-        var add = Ui.Button("Nuevo", MaterialIconKind.Plus, () => _ = NewAsync());
-        var folder = Ui.IconButton(MaterialIconKind.FolderOpenOutline, Os.IsWindows ? "Abrir la carpeta en el Explorador de archivos" : "Abrir la carpeta en Finder", () => Shell.OpenFolder(AppPaths.UserIndicators));
+        var add = Ui.Button(L.T("Nuevo"), MaterialIconKind.Plus, () => _ = NewAsync());
+        var folder = Ui.IconButton(MaterialIconKind.FolderOpenOutline, Os.IsWindows ? L.T("Abrir la carpeta en el Explorador de archivos") : L.T("Abrir la carpeta en Finder"), () => Shell.OpenFolder(AppPaths.UserIndicators));
         var head = new DockPanel { Margin = new Thickness(0, 0, 0, 10) };
         var acts = Ui.H(4, folder, add);
         DockPanel.SetDock(acts, Dock.Right);
         head.Children.Add(acts);
-        head.Children.Add(Ui.H3("Archivos"));
+        head.Children.Add(Ui.H3(L.T("Archivos")));
         _files.SelectionChanged += (_, _) =>
         {
             if (_files.SelectedItem is ListBoxItem { Tag: string p }) Open(p);
@@ -70,7 +70,7 @@ internal sealed class CodeEditorWindow : Window
         left.Children.Add(head);
         var note = new TextBlock
         {
-            Text = "API de indicadores de Trading Hub (Indicator, OnCalculate, DataSeries, OnRender…); si pegás código escrito con esta API en otra plataforma, se adapta solo. Al guardar se recompila y queda disponible en Indicadores.",
+            Text = L.T("API de indicadores de Trading Hub (Indicator, OnCalculate, DataSeries, OnRender…); si pegás código escrito con esta API en otra plataforma, se adapta solo. Al guardar se recompila y queda disponible en Indicadores."),
             Classes = { "faint", "small" },
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 12, 0, 0),
@@ -79,7 +79,7 @@ internal sealed class CodeEditorWindow : Window
         left.Children.Add(note);
         left.Children.Add(Ui.Card(_files, 6));
 
-        var save = Ui.Button("Guardar y compilar", MaterialIconKind.Hammer, SaveAndCompile, "primary");
+        var save = Ui.Button(L.T("Guardar y compilar"), MaterialIconKind.Hammer, SaveAndCompile, "primary");
         ToolTip.SetTip(save, Keys.Label("S"));
         var bar = new DockPanel { Margin = new Thickness(16, 10) };
         var right = Ui.H(10, new Border { Child = Ui.H(7, _dot, _state), Classes = { "pill" } }, save);
@@ -133,7 +133,7 @@ internal sealed class CodeEditorWindow : Window
     {
         Save();
         _dot.Fill = Ui.Warn;
-        _state.Text = "Compilando…";
+        _state.Text = L.T("Compilando…");
         _svc.Scripts?.CompileAll();
     }
 
@@ -141,50 +141,20 @@ internal sealed class CodeEditorWindow : Window
     {
         int errors = r.Diagnostics.Count(d => d.Severity == "error");
         _dot.Fill = r.Success ? Ui.Up : Ui.Down;
-        _state.Text = r.Success ? $"Compilado · {r.Elapsed.TotalMilliseconds:0} ms" : $"{errors} error(es)";
+        _state.Text = r.Success ? L.F("Compilado · {0:0} ms",r.Elapsed.TotalMilliseconds) : $"{errors} error(es)";
         if (_path != null) _editor.ShowDiagnostics(r.Diagnostics, _path);
     }
 
     private async Task NewAsync()
     {
-        var name = await PromptDialog.ShowAsync(this, "Nuevo indicador", "Nombre de la clase", "MiIndicador", "Crear");
+        var name = await PromptDialog.ShowAsync(this, L.T("Nuevo indicador"), L.T("Nombre de la clase"), "MiIndicador", L.T("Crear"));
         if (name == null) return;
         string cls = new string(name.Where(char.IsLetterOrDigit).ToArray());
-        if (cls.Length == 0 || char.IsDigit(cls[0])) cls = "Indicador" + cls;
+        if (cls.Length == 0 || char.IsDigit(cls[0])) cls = L.T("Indicador") + cls;
         var path = Path.Combine(AppPaths.UserIndicators, cls + ".cs");
         if (!File.Exists(path)) File.WriteAllText(path, IndicatorTemplate(cls, name));
         FillFiles(path);
     }
 
-    private static string IndicatorTemplate(string cls, string display) => $$"""
-        using System.ComponentModel;
-        using System.ComponentModel.DataAnnotations;
-        using TradingHub.Indicators;
-        using TradingHub.Indicators.Drawing;
-
-        [DisplayName("{{display}}")]
-        [Category("Mis indicadores")]
-        public class {{cls}} : Indicator
-        {
-            private readonly ValueDataSeries _serie = new("Serie", "Valor") { Color = System.Drawing.Color.Orange, Width = 2 };
-
-            [Display(Name = "Período", GroupName = "Configuración")]
-            [Range(1, 1000)]
-            public int Periodo { get; set; } = 20;
-
-            public {{cls}}()
-            {
-                DataSeries[0] = _serie;
-            }
-
-            protected override void OnCalculate(int bar, decimal value)
-            {
-                // media simple del cierre como ejemplo
-                if (bar < Periodo) return;
-                decimal suma = 0;
-                for (int i = 0; i < Periodo; i++) suma += GetCandle(bar - i).Close;
-                _serie[bar] = suma / Periodo;
-            }
-        }
-        """;
+    private static string IndicatorTemplate(string cls, string display) => L.F("using System.ComponentModel;\nusing System.ComponentModel.DataAnnotations;\nusing TradingHub.Indicators;\nusing TradingHub.Indicators.Drawing;\n\n[DisplayName(\"{0}\")]\n[Category(\"Mis indicadores\")]\npublic class {1} : Indicator\n{{\n    private readonly ValueDataSeries _serie = new(\"Serie\", \"Valor\") {{ Color = System.Drawing.Color.Orange, Width = 2 }};\n\n    [Display(Name = \"Período\", GroupName = \"Configuración\")]\n    [Range(1, 1000)]\n    public int Periodo {{ get; set; }} = 20;\n\n    public {2}()\n    {{\n        DataSeries[0] = _serie;\n    }}\n\n    protected override void OnCalculate(int bar, decimal value)\n    {{\n        // media simple del cierre como ejemplo\n        if (bar < Periodo) return;\n        decimal suma = 0;\n        for (int i = 0; i < Periodo; i++) suma += GetCandle(bar - i).Close;\n        _serie[bar] = suma / Periodo;\n    }}\n}}",display,cls,cls);
 }

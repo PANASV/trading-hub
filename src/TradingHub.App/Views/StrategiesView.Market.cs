@@ -44,11 +44,11 @@ internal sealed partial class StrategiesView
         if (!Filtered(current)) _baseline = r;
         else if (_baseline != null && !SameRun(_baseline, r)) _baseline = null;
 
-        _marketBox.Children.Add(Ui.H3("Cómo le fue según el mercado"));
+        _marketBox.Children.Add(Ui.H3(L.T("Cómo le fue según el mercado")));
         _marketBox.Children.Add(new TextBlock
         {
-            Text = "Cada operación guarda cómo estaba el mercado al entrar, medido con las velas ya cerradas: la tendencia de las últimas 24 horas " +
-                   "(rango, mixto o tendencia alcista o bajista) y la volatilidad comparada con la del último mes.",
+            Text = L.T("Cada operación guarda cómo estaba el mercado al entrar, medido con las velas ya cerradas: la tendencia de las últimas 24 horas ") +
+                   L.T("(rango, mixto o tendencia alcista o bajista) y la volatilidad comparada con la del último mes."),
             Classes = { "faint", "small" },
             TextWrapping = TextWrapping.Wrap,
         });
@@ -59,11 +59,11 @@ internal sealed partial class StrategiesView
 
         // volver a correrlo solo en las condiciones elegidas
         _btConditions.Load(current.Filter, current.Min, current.Max);
-        var run = Ui.Button("Volver a correr solo en estas condiciones", MaterialIconKind.Play, () =>
+        var run = Ui.Button(L.T("Volver a correr solo en estas condiciones"), MaterialIconKind.Play, () =>
         {
             if (!_btConditions.IsValid)
             {
-                _status("Elegí al menos una condición de mercado y una volatilidad.");
+                _status(L.T("Elegí al menos una condición de mercado y una volatilidad."));
                 return;
             }
 
@@ -74,7 +74,7 @@ internal sealed partial class StrategiesView
             });
             _resultTabs?.Choose("market");
         }, "primary");
-        var reset = Ui.Button("Correr en todas las condiciones", MaterialIconKind.Restore, () =>
+        var reset = Ui.Button(L.T("Correr en todas las condiciones"), MaterialIconKind.Restore, () =>
         {
             ApplyParameters(new Dictionary<string, object?>
             {
@@ -86,13 +86,13 @@ internal sealed partial class StrategiesView
         var actions = new WrapPanel { ItemSpacing = 8, LineSpacing = 8, Children = { run, reset } };
         var note = new TextBlock
         {
-            Text = "Es un backtest nuevo con el filtro de contexto, no un recorte del anterior: en cada vela la estrategia mira el contexto medido hasta ese " +
-                   "momento y solo abre si es uno de los elegidos (las salidas siempre pasan), igual que en vivo. Ojo: si elegís las condiciones mirando " +
-                   "estos mismos resultados, es sobre los mismos datos; para saber si vale de verdad, validalo con walk-forward o en otro período.",
+            Text = L.T("Es un backtest nuevo con el filtro de contexto, no un recorte del anterior: en cada vela la estrategia mira el contexto medido hasta ese ") +
+                   L.T("momento y solo abre si es uno de los elegidos (las salidas siempre pasan), igual que en vivo. Ojo: si elegís las condiciones mirando ") +
+                   L.T("estos mismos resultados, es sobre los mismos datos; para saber si vale de verdad, validalo con walk-forward o en otro período."),
             Classes = { "faint", "small" },
             TextWrapping = TextWrapping.Wrap,
         };
-        var box = Ui.V(10, Ui.H3("Probar solo en ciertas condiciones"), _btConditions, actions, note);
+        var box = Ui.V(10, Ui.H3(L.T("Probar solo en ciertas condiciones")), _btConditions, actions, note);
         _marketBox.Children.Add(Ui.Card(box, 14));
     }
 
@@ -110,10 +110,10 @@ internal sealed partial class StrategiesView
     /// <summary>Todas las condiciones contra solo las elegidas, en una línea cada una.</summary>
     private Control Compare(BacktestResult all, BacktestResult only, (RegimeFilter Filter, int Min, int Max) f)
     {
-        string Line(BacktestResult x) => $"{Money(x.Metrics.NetProfit)} en {x.Metrics.TotalTrades} op · PF {(x.Metrics.ProfitFactor >= 999 ? "∞" : x.Metrics.ProfitFactor.ToString("0.00", Es))} · " +
+        string Line(BacktestResult x) => L.F("{0} en {1} op · PF {2} · ",Money(x.Metrics.NetProfit),x.Metrics.TotalTrades,(x.Metrics.ProfitFactor >= 999 ? "∞" : x.Metrics.ProfitFactor.ToString("0.00", Es))) +
                                          $"drawdown {Money(-x.Metrics.MaxDrawdown)}";
         string what = Robustness.DescribeFilter(f.Filter, f.Min, f.Max);
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12, RowSpacing = 4, RowDefinitions = new RowDefinitions("Auto,Auto") };
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions(L.T("Auto,*")), ColumnSpacing = 12, RowSpacing = 4, RowDefinitions = new RowDefinitions("Auto,Auto") };
         void Row(int row, string label, string text, IBrush color)
         {
             var l = new TextBlock { Text = label, Classes = { "muted" } };
@@ -125,8 +125,8 @@ internal sealed partial class StrategiesView
             grid.Children.Add(t);
         }
 
-        Row(0, "En todas las condiciones", Line(all), all.Metrics.NetProfit >= 0 ? Ui.Up : Ui.Down);
-        Row(1, $"Con el filtro ({what})", Line(only), only.Metrics.NetProfit >= 0 ? Ui.Up : Ui.Down);
+        Row(0, L.T("En todas las condiciones"), Line(all), all.Metrics.NetProfit >= 0 ? Ui.Up : Ui.Down);
+        Row(1, L.F("Con el filtro ({0})",what), Line(only), only.Metrics.NetProfit >= 0 ? Ui.Up : Ui.Down);
         return new Border { Child = grid, Background = Ui.Bg2, CornerRadius = new CornerRadius(8), Padding = new Thickness(12, 8) };
     }
 
@@ -135,20 +135,20 @@ internal sealed partial class StrategiesView
     {
         var known = trades.Where(t => t.EntryTrend != null).ToList();
         if (known.Count == 0)
-            return new TextBlock { Text = trades.Count == 0 ? "No hubo operaciones." : "Esta corrida no guardó el contexto de cada operación (es de antes): volvé a correr el backtest.", Classes = { "faint", "small" }, TextWrapping = TextWrapping.Wrap };
+            return new TextBlock { Text = trades.Count == 0 ? L.T("No hubo operaciones.") : L.T("Esta corrida no guardó el contexto de cada operación (es de antes): volvé a correr el backtest."), Classes = { "faint", "small" }, TextWrapping = TextWrapping.Wrap };
         var rows = new List<(string Name, List<ClosedTrade> Trades, bool Head)>();
         bool Trend(ClosedTrade t) => t.EntryTrend >= MarketContextTracker.TrendLimit;
-        rows.Add(("Rango", known.Where(t => t.EntryTrend <= MarketContextTracker.RangeLimit).ToList(), false));
-        rows.Add(("Mixto", known.Where(t => t.EntryTrend > MarketContextTracker.RangeLimit && !Trend(t)).ToList(), false));
-        rows.Add(("Tendencia alcista", known.Where(t => Trend(t) && t.EntryMarketDirection > 0).ToList(), false));
-        rows.Add(("Tendencia bajista", known.Where(t => Trend(t) && t.EntryMarketDirection < 0).ToList(), false));
+        rows.Add((L.T("Rango"), known.Where(t => t.EntryTrend <= MarketContextTracker.RangeLimit).ToList(), false));
+        rows.Add((L.T("Mixto"), known.Where(t => t.EntryTrend > MarketContextTracker.RangeLimit && !Trend(t)).ToList(), false));
+        rows.Add((L.T("Tendencia alcista"), known.Where(t => Trend(t) && t.EntryMarketDirection > 0).ToList(), false));
+        rows.Add((L.T("Tendencia bajista"), known.Where(t => Trend(t) && t.EntryMarketDirection < 0).ToList(), false));
         var undirected = known.Where(t => Trend(t) && t.EntryMarketDirection is null or 0).ToList();
-        if (undirected.Count > 0) rows.Add(("Tendencia (sin dirección guardada)", undirected, false));
+        if (undirected.Count > 0) rows.Add((L.T("Tendencia (sin dirección guardada)"), undirected, false));
         if (known.Count(t => t.EntryVolatilityRank != null) >= known.Count * 0.8)
         {
-            rows.Add(("Volatilidad baja", known.Where(t => t.EntryVolatilityRank <= MarketContextTracker.LowVolatility).ToList(), true));
-            rows.Add(("Volatilidad normal", known.Where(t => t.EntryVolatilityRank > MarketContextTracker.LowVolatility && t.EntryVolatilityRank < MarketContextTracker.HighVolatility).ToList(), false));
-            rows.Add(("Volatilidad alta", known.Where(t => t.EntryVolatilityRank >= MarketContextTracker.HighVolatility).ToList(), false));
+            rows.Add((L.T("Volatilidad baja"), known.Where(t => t.EntryVolatilityRank <= MarketContextTracker.LowVolatility).ToList(), true));
+            rows.Add((L.T("Volatilidad normal"), known.Where(t => t.EntryVolatilityRank > MarketContextTracker.LowVolatility && t.EntryVolatilityRank < MarketContextTracker.HighVolatility).ToList(), false));
+            rows.Add((L.T("Volatilidad alta"), known.Where(t => t.EntryVolatilityRank >= MarketContextTracker.HighVolatility).ToList(), false));
         }
 
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("2*,0.8*,1.2*,0.8*,1*,1.1*"), RowSpacing = 2 };
@@ -170,7 +170,7 @@ internal sealed partial class StrategiesView
         }
 
         grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        string[] titles = { "Condición al entrar", "Ops", "Neto", "PF", "Ganadoras", "Promedio" };
+        string[] titles = { L.T("Condición al entrar"), L.T("Ops"), L.T("Neto"), "PF", L.T("Ganadoras"), L.T("Promedio") };
         for (int i = 0; i < titles.Length; i++) Cell(titles[i], i, head: true);
         foreach (var (name, list, head) in rows)
         {
@@ -186,7 +186,7 @@ internal sealed partial class StrategiesView
             decimal net = list.Sum(t => t.NetPnl);
             decimal win = list.Where(t => t.NetPnl > 0).Sum(t => t.NetPnl), loss = -list.Where(t => t.NetPnl < 0).Sum(t => t.NetPnl);
             string pf = list.Count == 0 ? "—" : loss > 0 ? (win / loss).ToString("0.00", Es) : win > 0 ? "∞" : "—";
-            Cell(few && list.Count > 0 ? $"{name} (poca muestra)" : name, 0, faint: list.Count == 0 || few);
+            Cell(few && list.Count > 0 ? L.F("{0} (poca muestra)",name) : name, 0, faint: list.Count == 0 || few);
             Cell(list.Count.ToString(CultureInfo.InvariantCulture), 1, faint: list.Count == 0 || few);
             Cell(list.Count == 0 ? "—" : Money(net), 2, list.Count == 0 || few ? null : net >= 0 ? Ui.Up : Ui.Down, faint: list.Count == 0 || few);
             Cell(pf, 3, faint: list.Count == 0 || few);
@@ -197,7 +197,7 @@ internal sealed partial class StrategiesView
         int unknown = trades.Count - known.Count;
         var v = Ui.V(6, grid);
         if (unknown > 0)
-            v.Children.Add(new TextBlock { Text = $"{unknown} operación(es) sin contexto todavía (al principio, antes de tener historia para medirlo).", Classes = { "faint", "small" }, TextWrapping = TextWrapping.Wrap });
+            v.Children.Add(new TextBlock { Text = L.F("{0} operación(es) sin contexto todavía (al principio, antes de tener historia para medirlo).",unknown), Classes = { "faint", "small" }, TextWrapping = TextWrapping.Wrap });
         return v;
     }
 }
