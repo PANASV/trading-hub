@@ -67,6 +67,8 @@ public sealed class ScriptCompiler
         return source;
     }
 
+    private const string QuanTAlibUsings = "global using Q = QuanTAlib;\n";
+
     private static List<MetadataReference> BuildReferences()
     {
         var refs = new List<MetadataReference>();
@@ -115,7 +117,11 @@ public sealed class ScriptCompiler
             optimizationLevel: OptimizationLevel.Release,
             nullableContextOptions: NullableContextOptions.Annotations,
             allowUnsafe: true);
-        var compilation = CSharpCompilation.Create(assemblyName + "_" + Guid.NewGuid().ToString("N")[..8], trees, BuildReferences(), options);
+        var references = BuildReferences();
+        // Alias "Q" para QuanTAlib (Q.Jma, Q.Kama…), solo si la biblioteca está disponible en esta app.
+        if (references.Any(r => string.Equals(Path.GetFileName(r.Display), "QuanTAlib.dll", StringComparison.OrdinalIgnoreCase)))
+            trees.Add(CSharpSyntaxTree.ParseText(QuanTAlibUsings, parse, path: "QuanTAlib.g.cs", encoding: System.Text.Encoding.UTF8));
+        var compilation = CSharpCompilation.Create(assemblyName + "_" + Guid.NewGuid().ToString("N")[..8], trees, references, options);
 
         using var pe = new MemoryStream();
         using var pdb = new MemoryStream();
