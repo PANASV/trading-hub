@@ -50,12 +50,52 @@ public static class Loc
         foreach (var (code, _) in Languages)
             if (string.Equals(setting, code, StringComparison.OrdinalIgnoreCase))
                 return code;
-        return CultureInfo.CurrentUICulture.TwoLetterISOLanguageName switch
+        return SystemLanguage.Value switch
         {
             Spanish => Spanish,
             Chinese => Chinese,
             _ => English,
         };
+    }
+
+    /// <summary>
+    /// Idioma del sistema (dos letras). En la Mac una app abierta desde el Finder no recibe LANG y .NET ve la cultura
+    /// invariante: el idioma real está en las preferencias (AppleLanguages, el primero de la lista).
+    /// </summary>
+    private static readonly Lazy<string> SystemLanguage = new(() =>
+    {
+        var ui = CultureInfo.CurrentUICulture;
+        if (!OperatingSystem.IsMacOS() || ui.TwoLetterISOLanguageName is Spanish or Chinese) return ui.TwoLetterISOLanguageName;
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo("/usr/bin/defaults") { RedirectStandardOutput = true, UseShellExecute = false };
+            psi.ArgumentList.Add("read");
+            psi.ArgumentList.Add("-g");
+            psi.ArgumentList.Add("AppleLanguages");
+            using var p = System.Diagnostics.Process.Start(psi);
+            if (p == null) return ui.TwoLetterISOLanguageName;
+            string output = p.StandardOutput.ReadToEnd();
+            p.WaitForExit(2000);
+            return FirstAppleLanguage(output) ?? ui.TwoLetterISOLanguageName;
+        }
+        catch (Exception)
+        {
+            return ui.TwoLetterISOLanguageName;
+        }
+    });
+
+    /// <summary>El primer idioma de la salida de «defaults read -g AppleLanguages»: ( "zh-Hans-CN", en ) → "zh".</summary>
+    public static string? FirstAppleLanguage(string output)
+    {
+        foreach (var raw in output.Split(new[] { '(', ')', ',', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var tag = raw.Trim().Trim('"').Trim();
+            if (tag.Length < 2) continue;
+            int dash = tag.IndexOfAny(new[] { '-', '_' });
+            return (dash > 0 ? tag[..dash] : tag).ToLowerInvariant();
+        }
+
+        return null;
     }
 
     /// <summary>
