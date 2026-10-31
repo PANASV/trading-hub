@@ -55,3 +55,20 @@ public class JmaCamarilla : Strategy
 - `src/TradingHub.Scripting/ScriptCompiler.cs`：有 QuanTAlib 时为脚本加入 `Q` 别名
 - 两个 `.csproj`：`QuanTAlib` 0.8.12
 - `tests/TradingHub.Tests/QuanTAlibTests.cs`：7 个测试（与 QuanTAlib 逐根比对、实时 tick 不漂移、Camarilla 公式、UTC 与 CME 18:00 换日、策略与脚本别名）
+
+## 导入 IB Gateway 的 1 分钟 K 线
+
+适用于每天一个 CSV 的文件夹，文件名形如 `mnq1m_2026-10-30.csv`，表头是 `time,open,high,low,close,volume[,contract]`，`time` 为 Unix 秒（UTC）。
+
+- **App 里**：「Datos → Importar archivos」卡片 →「Importar carpeta de IB Gateway…」，选中整个文件夹。
+- **命令行**（App 不用开着，适合每天下载完后自动跑）：
+  ```bash
+  "/Applications/Trading Hub.app/Contents/MacOS/TradingHub" --import-ib ~/Documents/mnq-history/out
+  ```
+
+导入后的数据源叫「IB Gateway (velas 1m)」，按 CME 期货处理：tick 0.25、每点 $2（MNQ）、纽约 18:00 换日、回测按期货佣金计算。品种从文件名推断（mnq1m → MNQ，m2k1m → M2K），也可以在命令后面加上品种，或在「Nombre del instrumento」里填写。
+
+- 重复导入同一个文件夹会覆盖重写，不会产生重复数据。所以每天下载新数据后再导一次即可。
+- 成交量为 0 的分钟（IB 用上一价补出来的）会被跳过，与 TradingView 一致。
+- 每根 K 线拆成 4 笔合成成交，图表和回测上的 1 分钟 OHLCV 与原文件完全一致。但没有真实的主动买卖方向，所以 Footprint、Delta、CVD 都没有意义。
+- 换月时价格直接切换到新合约，不做价差调整（和 Rithmic、Databento 的连续合约相同）。
