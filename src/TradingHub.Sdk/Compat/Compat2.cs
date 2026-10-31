@@ -92,7 +92,7 @@ namespace TradingHub.Indicators
             var display = field?.GetCustomAttribute<DisplayAttribute>();
             try
             {
-                return display?.GetName() ?? value.ToString();
+                return TradingHub.Common.Loc.T(display?.GetName() ?? value.ToString());
             }
             catch
             {

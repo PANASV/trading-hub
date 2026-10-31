@@ -7,6 +7,9 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        // idioma de la interfaz: antes de armar cualquier texto
+        TradingHub.Common.Loc.Init(Services.AppSettings.Load().Language, Path.Combine(Services.AppPaths.Root, "Languages"));
+
         // modo laboratorio: Trading Hub como servidor MCP para Claude Code (sin ventanas)
         if (args.Contains("--mcp"))
         {

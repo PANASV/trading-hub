@@ -187,6 +187,7 @@ Esos indicadores son de sus autores: usalos respetando la licencia de cada fuent
 | [Ajustes](docs/ajustes.md) | Todas las opciones |
 | [Privacidad](docs/privacidad.md) | Qué queda en tu Mac y qué se conecta a internet |
 | [Desarrollo](docs/desarrollo.md) | Estructura del código, pruebas y escenas |
+| [Idiomas](docs/idiomas.md) | Español, English, 简体中文: cómo se elige y cómo completar las traducciones |
 | [Windows](PORTAR_A_WINDOWS.md) | Qué depende de cada sistema operativo y cómo se armó la versión de Windows |
 
 ## Apoyá el proyecto

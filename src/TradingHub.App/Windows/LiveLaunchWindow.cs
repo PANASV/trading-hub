@@ -21,9 +21,9 @@ internal sealed class LiveLaunchWindow : Window
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
     private readonly AppServices _svc;
     private readonly Action<string> _status;
-    private readonly ComboBox _strategy = new() { HorizontalAlignment = HorizontalAlignment.Stretch, PlaceholderText = "Elegí una estrategia" };
+    private readonly ComboBox _strategy = new() { HorizontalAlignment = HorizontalAlignment.Stretch, PlaceholderText = L.T("Elegí una estrategia") };
     private readonly InstrumentPicker _picker;
-    private readonly ComboBox _account = new() { HorizontalAlignment = HorizontalAlignment.Stretch, PlaceholderText = "Elegí primero el instrumento" };
+    private readonly ComboBox _account = new() { HorizontalAlignment = HorizontalAlignment.Stretch, PlaceholderText = L.T("Elegí primero el instrumento") };
     private readonly ComboBox _period = new() { HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly TextBlock _session = new() { Classes = { "faint", "small" }, TextWrapping = TextWrapping.Wrap };
     private readonly ParameterEditor _params = new();
@@ -31,7 +31,7 @@ internal sealed class LiveLaunchWindow : Window
     private readonly NumericUpDown _size = Num(0.25m, 0.01m, 100, "0.##", 1);
     private readonly NumericUpDown _dailyLoss = Num(10, 0, 100_000_000, "0.##", 0);
     private readonly NumericUpDown _maxDd = Num(10, 0, 100_000_000, "0.##", 0);
-    private readonly CheckBox _closeOnLimit = new() { Content = "Al tocar un límite, cerrar también su posición", IsChecked = true };
+    private readonly CheckBox _closeOnLimit = new() { Content = L.T("Al tocar un límite, cerrar también su posición"), IsChecked = true };
     private readonly ComboBox _portfolio = new() { HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly TextBlock _warning = new() { Foreground = Ui.Warn, TextWrapping = TextWrapping.Wrap, FontSize = 12, IsVisible = false };
     private readonly Button _start;
@@ -46,7 +46,7 @@ internal sealed class LiveLaunchWindow : Window
     {
         _svc = svc;
         _status = status;
-        Title = "Nueva estrategia en vivo";
+        Title = L.T("Nueva estrategia en vivo");
         Width = 600;
         Height = 840;
         MinWidth = 500;
@@ -57,7 +57,7 @@ internal sealed class LiveLaunchWindow : Window
         var catalog = svc.Strategies;
         if (catalog.Files.Count == 0) catalog.Refresh();
         foreach (var f in catalog.Files.OrderBy(f => f.DisplayName))
-            _strategy.Items.Add(new ComboBoxItem { Content = f.DisplayName + (f.LastCompile?.Success == false ? " (con errores)" : ""), Tag = f });
+            _strategy.Items.Add(new ComboBoxItem { Content = f.DisplayName + (f.LastCompile?.Success == false ? L.T(" (con errores)") : ""), Tag = f });
         foreach (var p in new[] { "M1", "M2", "M3", "M5", "M10", "M15", "M30", "H1", "H4" }) _period.Items.Add(p);
         _period.SelectedItem = "M5";
 
@@ -75,12 +75,12 @@ internal sealed class LiveLaunchWindow : Window
         _account.SelectionChanged += (_, _) => UpdateWarning();
         _strategy.SelectionChanged += (_, _) => _ = LoadStrategyAsync(null);
 
-        _portfolio.Items.Add(new ComboBoxItem { Content = "Ninguno (va al automático)", Tag = null });
+        _portfolio.Items.Add(new ComboBoxItem { Content = L.T("Ninguno (va al automático)"), Tag = null });
         foreach (var d in LiveStore.LoadPortfolios().Where(d => !d.Auto)) _portfolio.Items.Add(new ComboBoxItem { Content = d.Name, Tag = d.Id });
         _portfolio.SelectedItem = _portfolio.Items.OfType<ComboBoxItem>().FirstOrDefault(i => (i.Tag as string) == portfolioId) ?? _portfolio.Items[0];
 
-        _start = Ui.Button("Iniciar en vivo", MaterialIconKind.Play, () => _ = StartAsync(), "primary");
-        var cancel = Ui.Button("Cancelar", MaterialIconKind.Close, Close);
+        _start = Ui.Button(L.T("Iniciar en vivo"), MaterialIconKind.Play, () => _ = StartAsync(), "primary");
+        var cancel = Ui.Button(L.T("Cancelar"), MaterialIconKind.Close, Close);
 
         var riskGrid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,12,*,12,*") };
         void Put(Control c, int col)
@@ -89,21 +89,21 @@ internal sealed class LiveLaunchWindow : Window
             riskGrid.Children.Add(c);
         }
 
-        Put(Ui.Field("Tamaño (×)", _size, "multiplica sus órdenes"), 0);
-        Put(Ui.Field("Pérdida máx. del día", _dailyLoss, "0 = sin límite"), 2);
-        Put(Ui.Field("Drawdown máximo", _maxDd, "0 = sin límite"), 4);
+        Put(Ui.Field(L.T("Tamaño (×)"), _size, L.T("multiplica sus órdenes")), 0);
+        Put(Ui.Field(L.T("Pérdida máx. del día"), _dailyLoss, L.T("0 = sin límite")), 2);
+        Put(Ui.Field(L.T("Drawdown máximo"), _maxDd, L.T("0 = sin límite")), 4);
 
         var body = new StackPanel { Spacing = 18, Margin = new Thickness(22, 18, 22, 18) };
-        body.Children.Add(Ui.V(4, Ui.H2("Nueva estrategia en vivo"),
-            Note("Recibe el mercado en tiempo real y opera en la cuenta elegida. Antes de empezar arma sus indicadores con la historia (sin operar). Probala primero en la cuenta simulada.")));
-        body.Children.Add(Section("Qué y dónde", Ui.Field("Estrategia", _strategy), Ui.Field("Instrumento", _picker), Ui.Field("Cuenta", _account), _warning,
-            Ui.Field("Velas", _period), _session));
-        body.Children.Add(Section("Parámetros", _params, Note("Vienen de lo último que configuraste en su Backtest.")));
-        body.Children.Add(Section("Condición de mercado", _conditions,
-            Note("Solo abre operaciones cuando el mercado está en lo que elijas (tendencia de las últimas 24 horas y volatilidad del último mes, con velas ya cerradas). Después lo cambiás desde En vivo sin reiniciarla.")));
-        body.Children.Add(Section("Riesgo", riskGrid, _closeOnLimit,
-            Note("Pérdida del día: al tocarla no abre más hasta la próxima sesión. Drawdown: la detiene. Las salidas siempre cierran justo lo que abrió, aunque cambies el tamaño en el medio.")));
-        body.Children.Add(Section("Portafolio", _portfolio));
+        body.Children.Add(Ui.V(4, Ui.H2(L.T("Nueva estrategia en vivo")),
+            Note(L.T("Recibe el mercado en tiempo real y opera en la cuenta elegida. Antes de empezar arma sus indicadores con la historia (sin operar). Probala primero en la cuenta simulada."))));
+        body.Children.Add(Section(L.T("Qué y dónde"), Ui.Field(L.T("Estrategia"), _strategy), Ui.Field(L.T("Instrumento"), _picker), Ui.Field(L.T("Cuenta"), _account), _warning,
+            Ui.Field(L.T("Velas"), _period), _session));
+        body.Children.Add(Section(L.T("Parámetros"), _params, Note(L.T("Vienen de lo último que configuraste en su Backtest."))));
+        body.Children.Add(Section(L.T("Condición de mercado"), _conditions,
+            Note(L.T("Solo abre operaciones cuando el mercado está en lo que elijas (tendencia de las últimas 24 horas y volatilidad del último mes, con velas ya cerradas). Después lo cambiás desde En vivo sin reiniciarla."))));
+        body.Children.Add(Section(L.T("Riesgo"), riskGrid, _closeOnLimit,
+            Note(L.T("Pérdida del día: al tocarla no abre más hasta la próxima sesión. Drawdown: la detiene. Las salidas siempre cierran justo lo que abrió, aunque cambies el tamaño en el medio."))));
+        body.Children.Add(Section(L.T("Portafolio"), _portfolio));
 
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(22, 10, 22, 16) };
         actions.Children.Add(cancel);
@@ -156,7 +156,7 @@ internal sealed class LiveLaunchWindow : Window
     {
         bool real = (_account.SelectedItem as ComboBoxItem)?.Tag is AccountOption { IsReal: true };
         _warning.IsVisible = real;
-        _warning.Text = "Cuenta REAL: la estrategia va a mandar órdenes con dinero de verdad, sin confirmar cada una.";
+        _warning.Text = L.T("Cuenta REAL: la estrategia va a mandar órdenes con dinero de verdad, sin confirmar cada una.");
     }
 
     /// <summary>Carga parámetros, velas y sesión de su último backtest (o los de la clase).</summary>
@@ -167,7 +167,7 @@ internal sealed class LiveLaunchWindow : Window
         if (file.Type == null)
         {
             _params.Load(null, new Dictionary<string, object?>());
-            _status($"«{file.FileName}» tiene errores: arreglala en Backtesting.");
+            _status(L.F("«{0}» tiene errores: arreglala en Backtesting.",file.FileName));
             return;
         }
 
@@ -189,7 +189,7 @@ internal sealed class LiveLaunchWindow : Window
         var probe = file.Type != null ? (Strategy)Activator.CreateInstance(file.Type)! : null;
         probe?.SetParameters(values);
         _conditions.Load(probe?.RegimeFilter ?? RegimeFilter.All, probe?.MinVolatilityRank ?? 0, probe?.MaxVolatilityRank ?? 100);
-        _session.Text = $"Sesión: {(_timeZoneId ?? "UTC")} desde las {_sessionStart:hh\\:mm} (la del backtest; define el «día» para la pérdida máxima del día).";
+        _session.Text = L.F("Sesión: {0} desde las {1:hh\\:mm} (la del backtest; define el «día» para la pérdida máxima del día).",(_timeZoneId ?? "UTC"),_sessionStart);
     }
 
     /// <summary>Los parámetros con la condición de mercado elegida.</summary>
@@ -206,7 +206,7 @@ internal sealed class LiveLaunchWindow : Window
     {
         if (_strategy.SelectedItem is not ComboBoxItem { Tag: StrategyFile file })
         {
-            _status("Elegí una estrategia.");
+            _status(L.T("Elegí una estrategia."));
             return;
         }
 
@@ -218,25 +218,25 @@ internal sealed class LiveLaunchWindow : Window
 
         if (_account.SelectedItem is not ComboBoxItem { Tag: AccountOption acc })
         {
-            _status("Elegí una cuenta.");
+            _status(L.T("Elegí una cuenta."));
             return;
         }
 
         if (!ChartPeriod.TryParse(_period.SelectedItem as string ?? "M5", out var period))
         {
-            _status("Período inválido.");
+            _status(L.T("Período inválido."));
             return;
         }
 
         if (!_conditions.IsValid)
         {
-            _status("Elegí al menos una condición de mercado y una volatilidad.");
+            _status(L.T("Elegí al menos una condición de mercado y una volatilidad."));
             return;
         }
 
-        if (acc.IsReal && !await ConfirmDialog.ShowAsync(this, "Ejecutar en cuenta REAL",
-                $"«{file.DisplayName}» va a operar {_instrument.Symbol} en {acc.Name} con órdenes reales y sin confirmación individual. La detenés desde En vivo.",
-                "Ejecutar con dinero real", danger: true))
+        if (acc.IsReal && !await ConfirmDialog.ShowAsync(this, L.T("Ejecutar en cuenta REAL"),
+                L.F("«{0}» va a operar {1} en {2} con órdenes reales y sin confirmación individual. La detenés desde En vivo.",file.DisplayName,_instrument.Symbol,acc.Name),
+                L.T("Ejecutar con dinero real"), danger: true))
             return;
 
         _start.IsEnabled = false;

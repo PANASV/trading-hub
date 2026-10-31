@@ -16,7 +16,7 @@ public sealed class StrategyFile
     /// <summary>Id estable para el historial (el nombre de la clase).</summary>
     public string Id => Type?.FullName ?? FileName;
 
-    public Strategy Create() => (Strategy)Activator.CreateInstance(Type ?? throw new InvalidOperationException("La estrategia no está compilada."))!;
+    public Strategy Create() => (Strategy)Activator.CreateInstance(Type ?? throw new InvalidOperationException(L.T("La estrategia no está compilada.")))!;
 }
 
 /// <summary>Estrategias del usuario: archivos en ~/Documents/Trading Hub/Estrategias, compilados con Roslyn.</summary>
@@ -67,7 +67,7 @@ public sealed class StrategyCatalog
             file.Type = types.FirstOrDefault();
             if (file.Type == null)
             {
-                var diag = new ScriptDiagnostic(file.Path, 1, 1, "error", "TH01", "El archivo no tiene ninguna clase pública que herede de Strategy con un constructor sin parámetros.");
+                var diag = new ScriptDiagnostic(file.Path, 1, 1, "error", "TH01", L.T("El archivo no tiene ninguna clase pública que herede de Strategy con un constructor sin parámetros."));
                 file.LastCompile = new ScriptCompileResult { Success = false, Diagnostics = res.Diagnostics.Append(diag).ToList(), Elapsed = res.Elapsed };
             }
         }
@@ -84,7 +84,7 @@ public sealed class StrategyCatalog
     public StrategyFile Create(string name, StrategyTemplate template)
     {
         string className = new string(name.Where(char.IsLetterOrDigit).ToArray());
-        if (className.Length == 0 || char.IsDigit(className[0])) className = "Estrategia" + className;
+        if (className.Length == 0 || char.IsDigit(className[0])) className = L.T("Estrategia") + className;
         var path = System.IO.Path.Combine(AppPaths.Strategies, className + ".cs");
         for (int i = 2; File.Exists(path); i++) path = System.IO.Path.Combine(AppPaths.Strategies, $"{className}{i}.cs");
         className = System.IO.Path.GetFileNameWithoutExtension(path);
@@ -108,220 +108,14 @@ public static class StrategyTemplates
 {
     public static readonly StrategyTemplate[] All =
     {
-        new("Cruce de medias", "Largo cuando la media rápida cruza arriba de la lenta y corto al revés. Ideal para empezar.", "CruceDeMedias", true, c => $$"""
-            using TradingHub.Strategies;
+        new(L.T("Cruce de medias"), L.T("Largo cuando la media rápida cruza arriba de la lenta y corto al revés. Ideal para empezar."), "CruceDeMedias", true, c => L.F("using TradingHub.Strategies;\n\n[Strategy(\"__NOMBRE__\", Description = \"Cruce de dos medias exponenciales con stop y objetivo en ticks.\")]\npublic class {0} : Strategy\n{{\n    [Parameter(\"Media rápida\"), Optimize(5, 30, 5)]\n    public int Rapida {{ get; set; }} = 10;\n\n    [Parameter(\"Media lenta\"), Optimize(20, 100, 10)]\n    public int Lenta {{ get; set; }} = 40;\n\n    private Ema _rapida = null!, _lenta = null!;\n\n    protected override void OnInit()\n    {{\n        _rapida = Ema(Rapida);\n        _lenta = Ema(Lenta);\n    }}\n\n    protected override void OnBar(Bar bar)\n    {{\n        if (!_lenta.IsReady) return;\n\n        if (CrossAbove(_rapida, _lenta)) EnterLong();\n        else if (CrossBelow(_rapida, _lenta)) EnterShort();\n    }}\n}}",c)),
 
-            [Strategy("__NOMBRE__", Description = "Cruce de dos medias exponenciales con stop y objetivo en ticks.")]
-            public class {{c}} : Strategy
-            {
-                [Parameter("Media rápida"), Optimize(5, 30, 5)]
-                public int Rapida { get; set; } = 10;
+        new(L.T("Ruptura de rango"), L.T("Compra la ruptura del máximo de N velas y vende la del mínimo, con stop por ATR."), "RupturaDeRango", true, c => L.F("using TradingHub.Strategies;\n\n[Strategy(\"__NOMBRE__\", Description = \"Ruptura de canal (Donchian) con salida por ATR.\")]\npublic class {0} : Strategy\n{{\n    [Parameter(\"Velas del canal\"), Optimize(10, 60, 10)]\n    public int Canal {{ get; set; }} = 20;\n\n    [Parameter(\"Múltiplo de ATR para el stop\"), Optimize(1, 4, 0.5)]\n    public double MultiploAtr {{ get; set; }} = 2;\n\n    private Highest _maximo = null!;\n    private Lowest _minimo = null!;\n    private Atr _atr = null!;\n    private decimal _stop;\n\n    protected override void OnInit()\n    {{\n        _maximo = Highest(Canal);\n        _minimo = Lowest(Canal);\n        _atr = Atr(14);\n    }}\n\n    protected override void OnBar(Bar bar)\n    {{\n        if (Bars.Count <= Canal || !_atr.IsReady) return;\n        decimal techo = _maximo[1], piso = _minimo[1];\n        decimal distancia = _atr.Value * (decimal)MultiploAtr;\n\n        if (IsFlat)\n        {{\n            if (bar.Close > techo) {{ EnterLong(); _stop = bar.Close - distancia; }}\n            else if (bar.Close < piso) {{ EnterShort(); _stop = bar.Close + distancia; }}\n        }}\n        else if (IsLong)\n        {{\n            _stop = Math.Max(_stop, bar.Close - distancia);\n            if (bar.Close < _stop) ClosePosition(\"Stop ATR\");\n        }}\n        else\n        {{\n            _stop = Math.Min(_stop, bar.Close + distancia);\n            if (bar.Close > _stop) ClosePosition(\"Stop ATR\");\n        }}\n    }}\n}}",c)),
 
-                [Parameter("Media lenta"), Optimize(20, 100, 10)]
-                public int Lenta { get; set; } = 40;
+        new(L.T("Absorción con delta"), L.T("Order flow: vela con delta muy negativo que igual cierra arriba (absorción de ventas) → compra, y al revés."), "AbsorcionConDelta", true, c => L.F("using TradingHub.Strategies;\n\n[Strategy(\"__NOMBRE__\", Description = \"Busca absorción: mucho volumen agresivo en contra que no logra mover el precio.\")]\npublic class {0} : Strategy\n{{\n    [Parameter(\"Velas para el promedio de volumen\")]\n    public int Promedio {{ get; set; }} = 20;\n\n    [Parameter(\"Volumen mínimo (x promedio)\"), Optimize(1.0, 3.0, 0.5)]\n    public double VolumenMinimo {{ get; set; }} = 1.5;\n\n    [Parameter(\"Delta mínimo (% del volumen)\"), Optimize(10, 40, 10)]\n    public int DeltaMinimo {{ get; set; }} = 20;\n\n    [Parameter(\"Velas máximas en la operación\")]\n    public int VelasMaximas {{ get; set; }} = 6;\n\n    private Sma _volumen = null!;\n    private int _barEntrada;\n\n    public {1}()\n    {{\n        StopLossTicks = 40;\n        TakeProfitTicks = 80;\n    }}\n\n    protected override void OnInit()\n    {{\n        UseFootprint = true; // volumen por precio en cada vela (bar.Levels, bar.PocPrice)\n        _volumen = Sma(Promedio, PriceSource.Volume);\n    }}\n\n    protected override void OnBar(Bar bar)\n    {{\n        if (!_volumen.IsReady) return;\n\n        if (!IsFlat && CurrentBar - _barEntrada >= VelasMaximas)\n        {{\n            ClosePosition(\"Tiempo\");\n            return;\n        }}\n\n        bool volumenAlto = bar.Volume >= _volumen[1] * (decimal)VolumenMinimo;\n        decimal deltaPct = bar.Volume > 0 ? 100 * bar.Delta / bar.Volume : 0;\n\n        // ventas agresivas fuertes pero la vela cierra arriba de su POC: alguien absorbió\n        if (IsFlat && volumenAlto && deltaPct <= -DeltaMinimo && bar.Close > bar.PocPrice && bar.IsBullish)\n        {{\n            EnterLong();\n            _barEntrada = CurrentBar;\n        }}\n        else if (IsFlat && volumenAlto && deltaPct >= DeltaMinimo && bar.Close < bar.PocPrice && bar.IsBearish)\n        {{\n            EnterShort();\n            _barEntrada = CurrentBar;\n        }}\n    }}\n}}",c,c)),
 
-                private Ema _rapida = null!, _lenta = null!;
+        new(L.T("Reversión a la VWAP"), L.T("Opera el regreso a la VWAP de la sesión cuando el precio se aleja demasiado, solo en un horario."), "ReversionVwap", true, c => L.F("using TradingHub.Strategies;\n\n[Strategy(\"__NOMBRE__\", Description = \"Vende extensiones por encima de la VWAP y compra por debajo; sale en la VWAP.\")]\npublic class {0} : Strategy\n{{\n    [Parameter(\"Distancia (x ATR)\"), Optimize(1.0, 3.0, 0.5)]\n    public double Distancia {{ get; set; }} = 2;\n\n    [Parameter(\"Desde (hora local)\")]\n    public int HoraDesde {{ get; set; }} = 10;\n\n    [Parameter(\"Hasta (hora local)\")]\n    public int HoraHasta {{ get; set; }} = 20;\n\n    private Vwap _vwap = null!;\n    private Atr _atr = null!;\n\n    public {1}()\n    {{\n        StopLossTicks = 60;\n    }}\n\n    protected override void OnInit()\n    {{\n        _vwap = Vwap();\n        _atr = Atr(20);\n    }}\n\n    protected override void OnBar(Bar bar)\n    {{\n        if (!_atr.IsReady) return;\n        bool horario = TimeBetween(TimeSpan.FromHours(HoraDesde), TimeSpan.FromHours(HoraHasta));\n        decimal banda = _atr.Value * (decimal)Distancia;\n\n        if (IsLong && bar.Close >= _vwap.Value) ClosePosition(\"VWAP\");\n        else if (IsShort && bar.Close <= _vwap.Value) ClosePosition(\"VWAP\");\n        else if (IsFlat && horario)\n        {{\n            if (bar.Close < _vwap.Value - banda) EnterLong();\n            else if (bar.Close > _vwap.Value + banda) EnterShort();\n        }}\n\n        // fuera de horario no se queda posicionado\n        if (!horario && !IsFlat) ClosePosition(\"Fin del horario\");\n    }}\n}}",c,c)),
 
-                protected override void OnInit()
-                {
-                    _rapida = Ema(Rapida);
-                    _lenta = Ema(Lenta);
-                }
-
-                protected override void OnBar(Bar bar)
-                {
-                    if (!_lenta.IsReady) return;
-
-                    if (CrossAbove(_rapida, _lenta)) EnterLong();
-                    else if (CrossBelow(_rapida, _lenta)) EnterShort();
-                }
-            }
-            """),
-
-        new("Ruptura de rango", "Compra la ruptura del máximo de N velas y vende la del mínimo, con stop por ATR.", "RupturaDeRango", true, c => $$"""
-            using TradingHub.Strategies;
-
-            [Strategy("__NOMBRE__", Description = "Ruptura de canal (Donchian) con salida por ATR.")]
-            public class {{c}} : Strategy
-            {
-                [Parameter("Velas del canal"), Optimize(10, 60, 10)]
-                public int Canal { get; set; } = 20;
-
-                [Parameter("Múltiplo de ATR para el stop"), Optimize(1, 4, 0.5)]
-                public double MultiploAtr { get; set; } = 2;
-
-                private Highest _maximo = null!;
-                private Lowest _minimo = null!;
-                private Atr _atr = null!;
-                private decimal _stop;
-
-                protected override void OnInit()
-                {
-                    _maximo = Highest(Canal);
-                    _minimo = Lowest(Canal);
-                    _atr = Atr(14);
-                }
-
-                protected override void OnBar(Bar bar)
-                {
-                    if (Bars.Count <= Canal || !_atr.IsReady) return;
-                    decimal techo = _maximo[1], piso = _minimo[1];
-                    decimal distancia = _atr.Value * (decimal)MultiploAtr;
-
-                    if (IsFlat)
-                    {
-                        if (bar.Close > techo) { EnterLong(); _stop = bar.Close - distancia; }
-                        else if (bar.Close < piso) { EnterShort(); _stop = bar.Close + distancia; }
-                    }
-                    else if (IsLong)
-                    {
-                        _stop = Math.Max(_stop, bar.Close - distancia);
-                        if (bar.Close < _stop) ClosePosition("Stop ATR");
-                    }
-                    else
-                    {
-                        _stop = Math.Min(_stop, bar.Close + distancia);
-                        if (bar.Close > _stop) ClosePosition("Stop ATR");
-                    }
-                }
-            }
-            """),
-
-        new("Absorción con delta", "Order flow: vela con delta muy negativo que igual cierra arriba (absorción de ventas) → compra, y al revés.", "AbsorcionConDelta", true, c => $$"""
-            using TradingHub.Strategies;
-
-            [Strategy("__NOMBRE__", Description = "Busca absorción: mucho volumen agresivo en contra que no logra mover el precio.")]
-            public class {{c}} : Strategy
-            {
-                [Parameter("Velas para el promedio de volumen")]
-                public int Promedio { get; set; } = 20;
-
-                [Parameter("Volumen mínimo (x promedio)"), Optimize(1.0, 3.0, 0.5)]
-                public double VolumenMinimo { get; set; } = 1.5;
-
-                [Parameter("Delta mínimo (% del volumen)"), Optimize(10, 40, 10)]
-                public int DeltaMinimo { get; set; } = 20;
-
-                [Parameter("Velas máximas en la operación")]
-                public int VelasMaximas { get; set; } = 6;
-
-                private Sma _volumen = null!;
-                private int _barEntrada;
-
-                public {{c}}()
-                {
-                    StopLossTicks = 40;
-                    TakeProfitTicks = 80;
-                }
-
-                protected override void OnInit()
-                {
-                    UseFootprint = true; // volumen por precio en cada vela (bar.Levels, bar.PocPrice)
-                    _volumen = Sma(Promedio, PriceSource.Volume);
-                }
-
-                protected override void OnBar(Bar bar)
-                {
-                    if (!_volumen.IsReady) return;
-
-                    if (!IsFlat && CurrentBar - _barEntrada >= VelasMaximas)
-                    {
-                        ClosePosition("Tiempo");
-                        return;
-                    }
-
-                    bool volumenAlto = bar.Volume >= _volumen[1] * (decimal)VolumenMinimo;
-                    decimal deltaPct = bar.Volume > 0 ? 100 * bar.Delta / bar.Volume : 0;
-
-                    // ventas agresivas fuertes pero la vela cierra arriba de su POC: alguien absorbió
-                    if (IsFlat && volumenAlto && deltaPct <= -DeltaMinimo && bar.Close > bar.PocPrice && bar.IsBullish)
-                    {
-                        EnterLong();
-                        _barEntrada = CurrentBar;
-                    }
-                    else if (IsFlat && volumenAlto && deltaPct >= DeltaMinimo && bar.Close < bar.PocPrice && bar.IsBearish)
-                    {
-                        EnterShort();
-                        _barEntrada = CurrentBar;
-                    }
-                }
-            }
-            """),
-
-        new("Reversión a la VWAP", "Opera el regreso a la VWAP de la sesión cuando el precio se aleja demasiado, solo en un horario.", "ReversionVwap", true, c => $$"""
-            using TradingHub.Strategies;
-
-            [Strategy("__NOMBRE__", Description = "Vende extensiones por encima de la VWAP y compra por debajo; sale en la VWAP.")]
-            public class {{c}} : Strategy
-            {
-                [Parameter("Distancia (x ATR)"), Optimize(1.0, 3.0, 0.5)]
-                public double Distancia { get; set; } = 2;
-
-                [Parameter("Desde (hora local)")]
-                public int HoraDesde { get; set; } = 10;
-
-                [Parameter("Hasta (hora local)")]
-                public int HoraHasta { get; set; } = 20;
-
-                private Vwap _vwap = null!;
-                private Atr _atr = null!;
-
-                public {{c}}()
-                {
-                    StopLossTicks = 60;
-                }
-
-                protected override void OnInit()
-                {
-                    _vwap = Vwap();
-                    _atr = Atr(20);
-                }
-
-                protected override void OnBar(Bar bar)
-                {
-                    if (!_atr.IsReady) return;
-                    bool horario = TimeBetween(TimeSpan.FromHours(HoraDesde), TimeSpan.FromHours(HoraHasta));
-                    decimal banda = _atr.Value * (decimal)Distancia;
-
-                    if (IsLong && bar.Close >= _vwap.Value) ClosePosition("VWAP");
-                    else if (IsShort && bar.Close <= _vwap.Value) ClosePosition("VWAP");
-                    else if (IsFlat && horario)
-                    {
-                        if (bar.Close < _vwap.Value - banda) EnterLong();
-                        else if (bar.Close > _vwap.Value + banda) EnterShort();
-                    }
-
-                    // fuera de horario no se queda posicionado
-                    if (!horario && !IsFlat) ClosePosition("Fin del horario");
-                }
-            }
-            """),
-
-        new("Vacía", "Esqueleto mínimo con los métodos disponibles.", "MiEstrategia", false, c => $$"""
-            using TradingHub.Strategies;
-
-            [Strategy("__NOMBRE__", Description = "")]
-            public class {{c}} : Strategy
-            {
-                // [Parameter("Nombre"), Optimize(mín, máx, paso)] para que aparezca en la optimización
-                [Parameter("Período"), Optimize(10, 50, 10)]
-                public int Periodo { get; set; } = 20;
-
-                private Sma _media = null!;
-
-                protected override void OnInit()
-                {
-                    // indicadores: Sma, Ema, Rsi, Atr, Vwap, Bollinger, Macd, Highest, Lowest, CumulativeDelta…
-                    _media = Sma(Periodo);
-                }
-
-                protected override void OnBar(Bar bar)
-                {
-                    // bar = vela recién cerrada (Open, High, Low, Close, Volume, BuyVolume, SellVolume, Delta…)
-                    // órdenes: EnterLong(), EnterShort(), Buy(), Sell(), BuyLimit(precio), SellStop(precio), ClosePosition()
-                    // stops automáticos: StopLossTicks, TakeProfitTicks, TrailingStopTicks
-                }
-            }
-            """),
+        new(L.T("Vacía"), L.T("Esqueleto mínimo con los métodos disponibles."), "MiEstrategia", false, c => L.F("using TradingHub.Strategies;\n\n[Strategy(\"__NOMBRE__\", Description = \"\")]\npublic class {0} : Strategy\n{{\n    // [Parameter(\"Nombre\"), Optimize(mín, máx, paso)] para que aparezca en la optimización\n    [Parameter(\"Período\"), Optimize(10, 50, 10)]\n    public int Periodo {{ get; set; }} = 20;\n\n    private Sma _media = null!;\n\n    protected override void OnInit()\n    {{\n        // indicadores: Sma, Ema, Rsi, Atr, Vwap, Bollinger, Macd, Highest, Lowest, CumulativeDelta…\n        _media = Sma(Periodo);\n    }}\n\n    protected override void OnBar(Bar bar)\n    {{\n        // bar = vela recién cerrada (Open, High, Low, Close, Volume, BuyVolume, SellVolume, Delta…)\n        // órdenes: EnterLong(), EnterShort(), Buy(), Sell(), BuyLimit(precio), SellStop(precio), ClosePosition()\n        // stops automáticos: StopLossTicks, TakeProfitTicks, TrailingStopTicks\n    }}\n}}",c)),
     };
 }

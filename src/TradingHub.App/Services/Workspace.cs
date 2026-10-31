@@ -247,7 +247,7 @@ internal static partial class Workspace
             var ind = w.Services.Catalog.Create(idto.Type);
             if (ind == null)
             {
-                w.SetStatus($"No encontré el indicador {idto.Type} (¿se borró o no compila?)");
+                w.SetStatus(L.F("No encontré el indicador {0} (¿se borró o no compila?)",idto.Type));
                 continue;
             }
 

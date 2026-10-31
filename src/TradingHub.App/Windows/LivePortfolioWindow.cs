@@ -31,7 +31,7 @@ internal sealed class LivePortfolioWindow : Window
         _svc = svc;
         _def = def ?? new LivePortfolioDef { Name = "Portafolio " + (LiveStore.LoadPortfolios().Count(d => !d.Auto) + 1) };
         bool isNew = def == null;
-        Title = isNew ? "Nuevo portafolio en vivo" : $"Portafolio · {_def.Name}";
+        Title = isNew ? L.T("Nuevo portafolio en vivo") : L.F("Portafolio · {0}",_def.Name);
         Width = 560;
         Height = 660;
         MinHeight = 420;
@@ -55,7 +55,7 @@ internal sealed class LivePortfolioWindow : Window
                     new TextBlock { Text = $"{e.Info.Strategy} · {e.Info.Symbol} {e.Info.Period}", FontWeight = FontWeight.SemiBold },
                     new TextBlock
                     {
-                        Text = $"{e.Info.Account} · {e.SourceLabel} · {e.StateLabel}{(other != null ? $" · hoy en «{other.Name}» (pasa a este)" : "")}{LockedNote(e)}",
+                        Text = $"{e.Info.Account} · {e.SourceLabel} · {e.StateLabel}{(other != null ? L.F(" · hoy en «{0}» (pasa a este)",other.Name) : "")}{LockedNote(e)}",
                         Classes = { "faint", "small" },
                         TextWrapping = TextWrapping.Wrap,
                     }),
@@ -64,18 +64,18 @@ internal sealed class LivePortfolioWindow : Window
             list.Children.Add(box);
         }
 
-        if (_members.Count == 0) list.Children.Add(new TextBlock { Text = "Todavía no hay estrategias en vivo para agregar. Lanzá una con «Nueva estrategia en vivo».", Classes = { "muted", "small" }, TextWrapping = TextWrapping.Wrap });
+        if (_members.Count == 0) list.Children.Add(new TextBlock { Text = L.T("Todavía no hay estrategias en vivo para agregar. Lanzá una con «Nueva estrategia en vivo»."), Classes = { "muted", "small" }, TextWrapping = TextWrapping.Wrap });
 
         var body = new StackPanel { Spacing = 16, Margin = new Thickness(22, 18, 22, 18) };
-        body.Children.Add(Ui.H2(isNew ? "Nuevo portafolio" : _def.Name));
+        body.Children.Add(Ui.H2(isNew ? L.T("Nuevo portafolio") : _def.Name));
         if (_def.Auto)
-            body.Children.Add(new TextBlock { Text = "El automático junta solo todas las estrategias que corren en vivo sin un portafolio tuyo. Podés cambiar su capital de referencia y su agente de riesgo.", Classes = { "muted", "small" }, TextWrapping = TextWrapping.Wrap });
-        body.Children.Add(Ui.Field("Nombre", _name));
-        body.Children.Add(Ui.Field("Capital de referencia", _capital, "Para los porcentajes, el drawdown y el Sharpe del portafolio (y el presupuesto de riesgo del agente)."));
-        body.Children.Add(Ui.V(8, Ui.H3("Estrategias"), new TextBlock { Text = "Una estrategia está en un solo portafolio tuyo a la vez. Para sumar una nueva, lanzala con «Nueva estrategia en vivo» eligiendo este portafolio.", Classes = { "faint", "small" }, TextWrapping = TextWrapping.Wrap }, list));
+            body.Children.Add(new TextBlock { Text = L.T("El automático junta solo todas las estrategias que corren en vivo sin un portafolio tuyo. Podés cambiar su capital de referencia y su agente de riesgo."), Classes = { "muted", "small" }, TextWrapping = TextWrapping.Wrap });
+        body.Children.Add(Ui.Field(L.T("Nombre"), _name));
+        body.Children.Add(Ui.Field(L.T("Capital de referencia"), _capital, L.T("Para los porcentajes, el drawdown y el Sharpe del portafolio (y el presupuesto de riesgo del agente).")));
+        body.Children.Add(Ui.V(8, Ui.H3(L.T("Estrategias")), new TextBlock { Text = L.T("Una estrategia está en un solo portafolio tuyo a la vez. Para sumar una nueva, lanzala con «Nueva estrategia en vivo» eligiendo este portafolio."), Classes = { "faint", "small" }, TextWrapping = TextWrapping.Wrap }, list));
 
-        var save = Ui.Button(isNew ? "Crear portafolio" : "Guardar", MaterialIconKind.Check, Save, "primary");
-        var cancel = Ui.Button("Cancelar", MaterialIconKind.Close, () => Close(null));
+        var save = Ui.Button(isNew ? L.T("Crear portafolio") : L.T("Guardar"), MaterialIconKind.Check, Save, "primary");
+        var cancel = Ui.Button(L.T("Cancelar"), MaterialIconKind.Close, () => Close(null));
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(22, 10, 22, 16) };
         actions.Children.Add(cancel);
         actions.Children.Add(save);

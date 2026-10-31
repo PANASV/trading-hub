@@ -134,8 +134,8 @@ public sealed class FootprintColumn
 
     public override string ToString() => Kind switch
     {
-        FootprintColumnKind.Candle => "Vela",
-        FootprintColumnKind.Spacer => "Espacio",
+        FootprintColumnKind.Candle => L.T("Vela"),
+        FootprintColumnKind.Spacer => L.T("Espacio"),
         _ => $"{Kind} · {Value}",
     };
 }
@@ -146,7 +146,7 @@ public sealed class FootprintColumn
 /// </summary>
 public sealed class FootprintLayout
 {
-    public string Name { get; set; } = "Personalizado";
+    public string Name { get; set; } = L.T("Personalizado");
     public List<FootprintColumn> Columns { get; set; } = new();
 
     /// <summary>Delta de la vela arriba y volumen total abajo.</summary>

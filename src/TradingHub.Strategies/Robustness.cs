@@ -259,20 +259,21 @@ public static class Robustness
     public static string? DescribeRegimes(RegimeSet set)
     {
         if (set is RegimeSet.All or RegimeSet.None) return null;
-        if (set == (RegimeSet.UpTrend | RegimeSet.DownTrend)) return "solo en tendencia";
-        if (set == (RegimeSet.Range | RegimeSet.Mixed)) return "sin tendencia (rango o mixto)";
-        if (set == (RegimeSet.Mixed | RegimeSet.UpTrend | RegimeSet.DownTrend)) return "sin rango (mixto o tendencia)";
-        static string Name(RegimeSet one) => one switch
+        static string T(string s) => TradingHub.Common.Loc.T(s);
+        if (set == (RegimeSet.UpTrend | RegimeSet.DownTrend)) return T("solo en tendencia");
+        if (set == (RegimeSet.Range | RegimeSet.Mixed)) return T("sin tendencia (rango o mixto)");
+        if (set == (RegimeSet.Mixed | RegimeSet.UpTrend | RegimeSet.DownTrend)) return T("sin rango (mixto o tendencia)");
+        static string Name(RegimeSet one) => TradingHub.Common.Loc.T(one switch
         {
             RegimeSet.Range => "rango",
             RegimeSet.Mixed => "mixto",
             RegimeSet.UpTrend => "tendencia alcista",
             _ => "tendencia bajista",
-        };
+        });
         var on = new[] { RegimeSet.Range, RegimeSet.Mixed, RegimeSet.UpTrend, RegimeSet.DownTrend }.Where(x => set.HasFlag(x)).ToList();
-        if (on.Count == 1) return "solo en " + Name(on[0]);
-        if (on.Count == 3) return "todo menos " + Name(RegimeSet.All & ~set);
-        return string.Join(" o ", on.Select(Name));
+        if (on.Count == 1) return TradingHub.Common.Loc.F("solo en {0}", Name(on[0]));
+        if (on.Count == 3) return TradingHub.Common.Loc.F("todo menos {0}", Name(RegimeSet.All & ~set));
+        return string.Join(T(" o "), on.Select(Name));
     }
 
     /// <summary>«solo en rango, volatilidad hasta el percentil 66».</summary>
@@ -280,9 +281,9 @@ public static class Robustness
     {
         var parts = new List<string>();
         if (DescribeRegimes(MarketContextTracker.SetOf(regime)) is { } r) parts.Add(r);
-        if (minRank > 0 && maxRank < 100) parts.Add($"volatilidad entre los percentiles {minRank} y {maxRank}");
-        else if (maxRank < 100) parts.Add(maxRank <= 33 ? "volatilidad baja" : $"volatilidad hasta el percentil {maxRank}");
-        else if (minRank > 0) parts.Add(minRank >= 67 ? "volatilidad alta" : $"volatilidad desde el percentil {minRank}");
+        if (minRank > 0 && maxRank < 100) parts.Add(TradingHub.Common.Loc.F("volatilidad entre los percentiles {0} y {1}", minRank, maxRank));
+        else if (maxRank < 100) parts.Add(maxRank <= 33 ? TradingHub.Common.Loc.T("volatilidad baja") : TradingHub.Common.Loc.F("volatilidad hasta el percentil {0}", maxRank));
+        else if (minRank > 0) parts.Add(minRank >= 67 ? TradingHub.Common.Loc.T("volatilidad alta") : TradingHub.Common.Loc.F("volatilidad desde el percentil {0}", minRank));
         return string.Join(", ", parts);
     }
 

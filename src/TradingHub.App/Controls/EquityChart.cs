@@ -46,7 +46,7 @@ public sealed class EquityChart : SkiaView
         Box = light ? new SKColor(0x11, 0x11, 0x11, 235) : new SKColor(0x1F, 0x28, 0x38);
     }
 
-    public string EmptyText { get; set; } = "Corré un backtest para ver la curva de capital";
+    public string EmptyText { get; set; } = L.T("Corré un backtest para ver la curva de capital");
 
     public void SetData(IReadOnlyList<EquityPoint> points, decimal capital, IReadOnlyList<IReadOnlyList<decimal>>? extra = null, IReadOnlyList<(DateTime, string)>? marks = null)
     {
@@ -118,7 +118,7 @@ public sealed class EquityChart : SkiaView
             decimal v = min + (max - min) * i / 4;
             float y = MathF.Floor(Y(v)) + 0.5f;
             canvas.DrawLine(left, y, left + plotW, y, grid);
-            canvas.DrawText(fine ? v.ToString("#,##0.##", CultureInfo.GetCultureInfo("es-AR")) : Format(v), left + plotW + 8, y + 4, font, text);
+            canvas.DrawText(fine ? v.ToString("#,##0.##", TradingHub.Common.Loc.Culture) : Format(v), left + plotW + 8, y + 4, font, text);
         }
 
         // capital inicial
@@ -231,7 +231,7 @@ public sealed class EquityChart : SkiaView
                 canvas.DrawLine(x, top, x, height - bottom, cross);
                 using var dot = new SKPaint { IsAntialias = true, Color = Accent };
                 canvas.DrawCircle(x, y, 3.5f, dot);
-                string label = $"{p.Time.ToLocalTime():dd/MM HH:mm}  ·  {Format(p.Equity)}  ·  DD {Format(-p.Drawdown)}";
+                string label = L.F("{0:dd/MM HH:mm}  ·  {1}  ·  DD {2}",p.Time.ToLocalTime(),Format(p.Equity),Format(-p.Drawdown));
                 float lw = RenderContext.MeasureWidth(font, label) + 14;
                 float lx = Math.Clamp(x - lw / 2, left, left + plotW - lw);
                 using var box = new SKPaint { IsAntialias = true, Color = Box };

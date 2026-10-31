@@ -29,10 +29,10 @@ public static class AppPaths
     /// Carpeta visible para los indicadores propios (.cs) del usuario. TRADINGHUB_INDICATORS_DIR la cambia (pruebas); con
     /// TRADINGHUB_DATA_DIR y sin ella, una dentro de esa carpeta: una prueba nunca escribe en la carpeta real.
     /// </summary>
-    public static string UserIndicators { get; } = TestFolder("TRADINGHUB_INDICATORS_DIR", "Indicadores") ?? Path.Combine(TradingHub.Common.Product.Documents, "Indicadores");
+    public static string UserIndicators { get; } = TestFolder("TRADINGHUB_INDICATORS_DIR", L.T("Indicadores")) ?? Path.Combine(TradingHub.Common.Product.Documents, "Indicadores");
 
     /// <summary>Carpeta visible para las estrategias (.cs). TRADINGHUB_STRATEGIES_DIR la cambia (pruebas), igual que los indicadores.</summary>
-    public static string Strategies { get; } = TestFolder("TRADINGHUB_STRATEGIES_DIR", "Estrategias") ?? Path.Combine(TradingHub.Common.Product.Documents, "Estrategias");
+    public static string Strategies { get; } = TestFolder("TRADINGHUB_STRATEGIES_DIR", L.T("Estrategias")) ?? Path.Combine(TradingHub.Common.Product.Documents, "Estrategias");
 
     private static string? TestFolder(string variable, string name) =>
         Environment.GetEnvironmentVariable(variable) is { Length: > 0 } dir ? dir
@@ -78,10 +78,11 @@ public sealed class IndicatorCatalog
             if (t.IsAbstract || !typeof(Indicator).IsAssignableFrom(t) || t.GetConstructor(Type.EmptyTypes) == null) continue;
             if (t.GetCustomAttribute<BrowsableAttribute>() is { Browsable: false }) continue;
             string name = Indicator.DefaultName(t);
-            string cat = t.GetCustomAttribute<CategoryAttribute>()?.Category ?? IndicatorCategories.Other;
+            string cat = L.T(t.GetCustomAttribute<CategoryAttribute>()?.Category ?? IndicatorCategories.Other);
             string desc = "";
             try { desc = t.GetCustomAttribute<System.ComponentModel.DataAnnotations.DisplayAttribute>()?.GetDescription() ?? t.GetCustomAttribute<DescriptionAttribute>()?.Description ?? ""; }
             catch { /* recursos de localización ausentes */ }
+            desc = L.T(desc);
             _items.RemoveAll(i => i.Type.FullName == t.FullName && i.Source == source);
             _items.Add(new IndicatorInfo(t, name, cat, source, desc));
         }
@@ -122,6 +123,9 @@ public sealed class AppSettings
     private static readonly string FilePath = Path.Combine(AppPaths.Root, "settings.json");
 
     public string? TimeZoneId { get; set; }
+
+    /// <summary>Idioma de la interfaz: "auto" (el del sistema), "es", "en" o "zh". Se aplica al abrir la app.</summary>
+    public string Language { get; set; } = TradingHub.Common.Loc.Auto;
     public bool ConfirmRealOrders { get; set; } = true;
 
     /// <summary>Estrategias favoritas (por nombre de archivo): van arriba de todo en la lista de Backtesting.</summary>
@@ -295,7 +299,7 @@ public sealed class AppServices
     }
 
     /// <summary>Id de una cuenta de Tradovate en Trading Hub: tradovate|conexión|cuenta.</summary>
-    public static string TradovateAccountId(ConnectionProfile p, long account) => $"tradovate|{p.Id}|{account}";
+    public static string TradovateAccountId(ConnectionProfile p, long account) => L.F("tradovate|{0}|{1}",p.Id,account);
 
     /// <summary>Futuro de CME (sirve para operarlo con una cuenta de Tradovate aunque el gráfico sea de otra conexión).</summary>
     private static bool IsCmeFuture(Instrument inst) =>
@@ -320,11 +324,11 @@ public sealed class AppServices
         var p = Connections.Enabled.FirstOrDefault(x => x.IsRithmic && x.MarketDataId == data.Instrument.FeedId && !string.IsNullOrWhiteSpace(x.RithmicUser));
         if (p == null) return null;
         var s = RithmicSessionFor(p);
-        return s.IsConnected ? null : "Rithmic: " + s.StatusText;
+        return s.IsConnected ? null : L.T("Rithmic: ") + s.StatusText;
     }
 
     /// <summary>Id de una cuenta de Rithmic en Trading Hub: rithmic|conexión|cuenta.</summary>
-    public static string RithmicAccountId(ConnectionProfile p, string account) => $"rithmic|{p.Id}|{account}";
+    public static string RithmicAccountId(ConnectionProfile p, string account) => L.F("rithmic|{0}|{1}",p.Id,account);
 
     public AppServices()
     {
@@ -412,8 +416,8 @@ public sealed class AppServices
         bool waiting = false;
         if (live == 0 && !agents && !waiting) return null;
         var parts = new List<string>();
-        if (live > 0) parts.Add($"{live} estrategia(s) en vivo");
-        if (agents) parts.Add("agentes trabajando");
+        if (live > 0) parts.Add(L.F("{0} estrategia(s) en vivo",live));
+        if (agents) parts.Add(L.T("agentes trabajando"));
         return string.Join(" y ", parts);
     }
 
@@ -495,11 +499,11 @@ public sealed class AppServices
     /// <summary>Cuentas con las que se puede operar este instrumento.</summary>
     public IEnumerable<AccountOption> AccountsFor(InstrumentData data)
     {
-        yield return new AccountOption("sim", "Cuenta simulada", false);
+        yield return new AccountOption("sim", L.T("Cuenta simulada"), false);
         foreach (var p in Connections.Enabled.Where(p => p.SupportsTrading && p.MarketDataId == data.Instrument.FeedId && !string.IsNullOrWhiteSpace(p.ApiKey)))
         {
             if (p.Testnet) yield return new AccountOption(p.Id, $"{p.Name} (testnet)", false);
-            else if (p.AllowRealOrders) yield return new AccountOption(p.Id, $"{p.Name} — REAL", true);
+            else if (p.AllowRealOrders) yield return new AccountOption(p.Id, L.F("{0} — REAL",p.Name), true);
         }
 
         // cuentas de Tradovate: operan cualquier futuro de CME, también desde un gráfico de Rithmic
@@ -509,8 +513,8 @@ public sealed class AppServices
                 var session = TradovateSessionFor(p);
                 foreach (var a in session.Accounts)
                 {
-                    if (session.IsDemo) yield return new AccountOption(TradovateAccountId(p, a.Id), $"{a.Name} · Tradovate (demo)", false);
-                    else if (p.AllowRealOrders) yield return new AccountOption(TradovateAccountId(p, a.Id), $"{a.Name} · Tradovate — REAL", true);
+                    if (session.IsDemo) yield return new AccountOption(TradovateAccountId(p, a.Id), L.F("{0} · Tradovate (demo)",a.Name), false);
+                    else if (p.AllowRealOrders) yield return new AccountOption(TradovateAccountId(p, a.Id), L.F("{0} · Tradovate — REAL",a.Name), true);
                 }
             }
 
@@ -520,8 +524,8 @@ public sealed class AppServices
             var session = RithmicSessionFor(p);
             foreach (var a in session.Accounts)
             {
-                if (session.IsPractice) yield return new AccountOption(RithmicAccountId(p, a.AccountId), $"{a.AccountId} · Rithmic (práctica)", false);
-                else if (p.AllowRealOrders) yield return new AccountOption(RithmicAccountId(p, a.AccountId), $"{a.AccountId} · Rithmic — REAL", true);
+                if (session.IsPractice) yield return new AccountOption(RithmicAccountId(p, a.AccountId), L.F("{0} · Rithmic (práctica)",a.AccountId), false);
+                else if (p.AllowRealOrders) yield return new AccountOption(RithmicAccountId(p, a.AccountId), L.F("{0} · Rithmic — REAL",a.AccountId), true);
             }
         }
     }
@@ -538,7 +542,7 @@ public sealed class AppServices
             var session = TradovateSessionFor(tp);
             long id = long.Parse(parts[2], System.Globalization.CultureInfo.InvariantCulture);
             var acc = session.Accounts.FirstOrDefault(a => a.Id == id) ?? new TradingHub.Feeds.Tradovate.TradovateAccount(id, parts[2], true);
-            var tb = new TradingHub.Feeds.Tradovate.TradovateBroker(data, session, acc, $"{acc.Name} · Tradovate{(session.IsDemo ? " (demo)" : " — REAL")}");
+            var tb = new TradingHub.Feeds.Tradovate.TradovateBroker(data, session, acc, L.F("{0} · Tradovate{1}",acc.Name,(session.IsDemo ? " (demo)" : L.T(" — REAL"))));
             _realBrokers[key] = tb;
             return tb;
         }
@@ -549,14 +553,14 @@ public sealed class AppServices
             var rp = Connections.Find(parts[1]) ?? throw new KeyNotFoundException(accountId);
             var session = RithmicSessionFor(rp);
             var feed = (TradingHub.Feeds.Rithmic.RithmicFeed)Connections.GetFeed(rp.Id);
-            var rb = new TradingHub.Feeds.Rithmic.RithmicBroker(data, session, parts[2], $"{parts[2]} · Rithmic{(session.IsPractice ? " (práctica)" : " — REAL")}",
+            var rb = new TradingHub.Feeds.Rithmic.RithmicBroker(data, session, parts[2], L.F("{0} · Rithmic{1}",parts[2],(session.IsPractice ? L.T(" (práctica)") : L.T(" — REAL"))),
                 ct => feed.ContractAsync(data.Instrument, ct));
             _realBrokers[key] = rb;
             return rb;
         }
 
         var p = Connections.Find(accountId) ?? throw new KeyNotFoundException(accountId);
-        b = new BinanceBroker(data, Connections.BinanceSettingsOf(p), p.Testnet ? $"{p.Name} (testnet)" : $"{p.Name} — REAL");
+        b = new BinanceBroker(data, Connections.BinanceSettingsOf(p), p.Testnet ? $"{p.Name} (testnet)" : L.F("{0} — REAL",p.Name));
         _realBrokers[key] = b;
         return b;
     }

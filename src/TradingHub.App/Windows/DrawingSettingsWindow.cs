@@ -61,26 +61,26 @@ public sealed class DrawingSettingsWindow : Window
         else if (drawing.Kind != DrawingKind.VerticalLine) body.Children.Add(PricesSection());
         body.Children.Add(VisibilitySection());
 
-        var makeDefault = Ui.Button("Usar como predeterminado", MaterialIconKind.StarOutline, () =>
+        var makeDefault = Ui.Button(L.T("Usar como predeterminado"), MaterialIconKind.StarOutline, () =>
         {
             var template = new ChartDrawing { Kind = _d.Kind };
             template.CopyStyleFrom(_d);
             _svc.Settings.DrawingDefaults[_d.Kind.ToString()] = template;
             _svc.Settings.Save();
-            Title = ChartDrawing.KindName(_d.Kind) + " · estilo guardado como predeterminado";
+            Title = ChartDrawing.KindName(_d.Kind) + L.T(" · estilo guardado como predeterminado");
         });
-        ToolTip.SetTip(makeDefault, "Los próximos dibujos de este tipo salen con este estilo");
-        var dup = Ui.Button("Duplicar", MaterialIconKind.ContentCopy, () =>
+        ToolTip.SetTip(makeDefault, L.T("Los próximos dibujos de este tipo salen con este estilo"));
+        var dup = Ui.Button(L.T("Duplicar"), MaterialIconKind.ContentCopy, () =>
         {
             duplicate();
             Close();
         });
-        var del = Ui.Button("Eliminar", MaterialIconKind.DeleteOutline, () =>
+        var del = Ui.Button(L.T("Eliminar"), MaterialIconKind.DeleteOutline, () =>
         {
             delete();
             Close();
         }, "danger");
-        var close = Ui.Button("Listo", MaterialIconKind.Check, Close, "primary");
+        var close = Ui.Button(L.T("Listo"), MaterialIconKind.Check, Close, "primary");
         var actions = new WrapPanel { ItemSpacing = 8, LineSpacing = 8, Margin = new Thickness(20, 10, 20, 16) };
         foreach (var b in new Control[] { makeDefault, dup, del, close }) actions.Children.Add(b);
 
@@ -133,9 +133,9 @@ public sealed class DrawingSettingsWindow : Window
         };
         var style = new Ui.Segmented<LineStyleKind>(new[]
         {
-            (LineStyleKind.Solid, "Sólida", (string?)null),
-            (LineStyleKind.Dashed, "Guiones", (string?)null),
-            (LineStyleKind.Dotted, "Puntos", (string?)null),
+            (LineStyleKind.Solid, L.T("Sólida"), (string?)null),
+            (LineStyleKind.Dashed, L.T("Guiones"), (string?)null),
+            (LineStyleKind.Dotted, L.T("Puntos"), (string?)null),
         });
         style.Select(_d.EffectiveLineStyle);
         style.SelectionChanged += v =>
@@ -144,10 +144,10 @@ public sealed class DrawingSettingsWindow : Window
             _d.Dashed = false;
             Changed();
         };
-        return Section("Línea",
+        return Section(L.T("Línea"),
             Labeled("Color", ColorPicker(() => _d.ColorArgb, c => _d.ColorArgb = c, allowAuto: false)),
-            Labeled("Grosor", Ui.H(8, width, widthText)),
-            Labeled("Estilo", style));
+            Labeled(L.T("Grosor"), Ui.H(8, width, widthText)),
+            Labeled(L.T("Estilo"), style));
     }
 
     private Control FillSection()
@@ -160,14 +160,14 @@ public sealed class DrawingSettingsWindow : Window
             _d.FillArgb = (Current() & 0x00FFFFFF) | ((uint)opacity.Value << 24);
             Changed();
         };
-        return Section("Relleno",
+        return Section(L.T("Relleno"),
             Labeled("Color", ColorPicker(() => _d.FillArgb, c => _d.FillArgb = c == 0 ? 0 : (c & 0x00FFFFFF) | ((uint)opacity.Value << 24), allowAuto: true)),
-            Labeled("Opacidad", opacity));
+            Labeled(L.T("Opacidad"), opacity));
     }
 
     private Control TextSection()
     {
-        var text = new TextBox { Text = _d.Text == "alerta" ? "" : _d.Text, Watermark = _d.Kind == DrawingKind.Text ? "Texto" : "Etiqueta (opcional)", AcceptsReturn = false };
+        var text = new TextBox { Text = _d.Text == "alerta" ? "" : _d.Text, Watermark = _d.Kind == DrawingKind.Text ? L.T("Texto") : L.T("Etiqueta (opcional)"), AcceptsReturn = false };
         text.TextChanged += (_, _) =>
         {
             _d.Text = text.Text ?? "";
@@ -180,22 +180,22 @@ public sealed class DrawingSettingsWindow : Window
             _d.FontSize = (float)(size.Value ?? 13);
             Changed();
         };
-        var bold = new CheckBox { Content = "Negrita", IsChecked = _d.Bold, Margin = new Thickness(12, 0, 0, 0) };
+        var bold = new CheckBox { Content = L.T("Negrita"), IsChecked = _d.Bold, Margin = new Thickness(12, 0, 0, 0) };
         bold.IsCheckedChanged += (_, _) =>
         {
             _d.Bold = bold.IsChecked == true;
             Changed();
         };
-        return Section("Texto",
+        return Section(L.T("Texto"),
             text,
-            Labeled("Tamaño", Ui.H(4, size, bold)),
+            Labeled(L.T("Tamaño"), Ui.H(4, size, bold)),
             Labeled("Color", ColorPicker(() => _d.TextArgb, c => _d.TextArgb = c, allowAuto: true)));
     }
 
     private Control ExtendSection()
     {
-        var left = new CheckBox { Content = "A la izquierda", IsChecked = _d.ExtendLeft };
-        var right = new CheckBox { Content = "A la derecha", IsChecked = _d.ExtendRight, Margin = new Thickness(16, 0, 0, 0) };
+        var left = new CheckBox { Content = L.T("A la izquierda"), IsChecked = _d.ExtendLeft };
+        var right = new CheckBox { Content = L.T("A la derecha"), IsChecked = _d.ExtendRight, Margin = new Thickness(16, 0, 0, 0) };
         left.IsCheckedChanged += (_, _) =>
         {
             _d.ExtendLeft = left.IsChecked == true;
@@ -209,7 +209,7 @@ public sealed class DrawingSettingsWindow : Window
         var rows = new List<Control> { Ui.H(0, left, right) };
         if (_d.Kind is DrawingKind.HorizontalRay or DrawingKind.FibRetracement or DrawingKind.HorizontalLine)
         {
-            var price = new CheckBox { Content = "Mostrar el precio", IsChecked = _d.ShowPriceLabel };
+            var price = new CheckBox { Content = L.T("Mostrar el precio"), IsChecked = _d.ShowPriceLabel };
             price.IsCheckedChanged += (_, _) =>
             {
                 _d.ShowPriceLabel = price.IsChecked == true;
@@ -218,7 +218,7 @@ public sealed class DrawingSettingsWindow : Window
             rows.Add(price);
         }
 
-        return Section("Extender", rows.ToArray());
+        return Section(L.T("Extender"), rows.ToArray());
     }
 
     private Control LevelsSection()
@@ -247,7 +247,7 @@ public sealed class DrawingSettingsWindow : Window
                     lvl.ColorArgb = c;
                     Changed();
                 });
-                var remove = Ui.IconButton(MaterialIconKind.Close, "Quitar el nivel", () =>
+                var remove = Ui.IconButton(MaterialIconKind.Close, L.T("Quitar el nivel"), () =>
                 {
                     levels.Remove(lvl);
                     Changed();
@@ -258,25 +258,25 @@ public sealed class DrawingSettingsWindow : Window
         }
 
         Rebuild();
-        var add = Ui.Button("Agregar nivel", MaterialIconKind.Plus, () =>
+        var add = Ui.Button(L.T("Agregar nivel"), MaterialIconKind.Plus, () =>
         {
             (_d.Levels ??= _d.EffectiveLevels.Select(l => l.Clone()).ToList()).Add(new FibLevel { Value = 2.618 });
             Changed();
             Rebuild();
         });
-        var reset = Ui.Button("Restablecer", MaterialIconKind.Restore, () =>
+        var reset = Ui.Button(L.T("Restablecer"), MaterialIconKind.Restore, () =>
         {
             _d.Levels = null;
             Changed();
             Rebuild();
         });
-        var price = new CheckBox { Content = "Mostrar el precio de cada nivel", IsChecked = _d.ShowPriceLabel };
+        var price = new CheckBox { Content = L.T("Mostrar el precio de cada nivel"), IsChecked = _d.ShowPriceLabel };
         price.IsCheckedChanged += (_, _) =>
         {
             _d.ShowPriceLabel = price.IsChecked == true;
             Changed();
         };
-        return Section("Niveles", list, Ui.H(8, add, reset), price);
+        return Section(L.T("Niveles"), list, Ui.H(8, add, reset), price);
     }
 
     private NumericUpDown PriceBox(double value, Action<double> set)
@@ -305,7 +305,7 @@ public sealed class DrawingSettingsWindow : Window
         void UpdateRr()
         {
             double risk = Math.Abs(_d.Points[0].Price - _d.Points[2].Price), reward = Math.Abs(_d.Points[1].Price - _d.Points[0].Price);
-            rr.Text = risk > 0 ? $"Riesgo/beneficio 1 : {reward / risk:0.00}" : "";
+            rr.Text = risk > 0 ? L.F("Riesgo/beneficio 1 : {0:0.00}",reward / risk) : "";
         }
 
         UpdateRr();
@@ -330,13 +330,13 @@ public sealed class DrawingSettingsWindow : Window
             _d.Quantity = qty.Value ?? 0;
             Changed();
         };
-        return Section("Precios",
-            Labeled("Entrada", entry),
-            Labeled("Objetivo", target),
+        return Section(L.T("Precios"),
+            Labeled(L.T("Entrada"), entry),
+            Labeled(L.T("Objetivo"), target),
             Labeled("Stop", stop),
-            Labeled("Cantidad", qty),
+            Labeled(L.T("Cantidad"), qty),
             rr,
-            Note("Con cantidad muestra cuánto ganarías o perderías. Si las velas tocan el objetivo o el stop, lo marca."));
+            Note(L.T("Con cantidad muestra cuánto ganarías o perderías. Si las velas tocan el objetivo o el stop, lo marca.")));
     }
 
     private Control PricesSection()
@@ -346,29 +346,29 @@ public sealed class DrawingSettingsWindow : Window
         for (int i = 0; i < n && i < _d.Points.Count; i++)
         {
             int k = i;
-            rows.Add(Labeled(n == 1 ? "Precio" : $"Precio {k + 1}", PriceBox(_d.Points[k].Price, v => _d.Points[k] = new ChartPoint(_d.Points[k].Time, v))));
+            rows.Add(Labeled(n == 1 ? L.T("Precio") : L.F("Precio {0}",k + 1), PriceBox(_d.Points[k].Price, v => _d.Points[k] = new ChartPoint(_d.Points[k].Time, v))));
         }
 
-        return Section("Coordenadas", rows.ToArray());
+        return Section(L.T("Coordenadas"), rows.ToArray());
     }
 
     private Control VisibilitySection()
     {
-        var hidden = new CheckBox { Content = "Ocultar", IsChecked = _d.Hidden };
+        var hidden = new CheckBox { Content = L.T("Ocultar"), IsChecked = _d.Hidden };
         hidden.IsCheckedChanged += (_, _) =>
         {
             _d.Hidden = hidden.IsChecked == true;
             Changed();
         };
-        var only = new CheckBox { Content = $"Mostrar solo en {_period.DisplayName}", IsChecked = _d.OnlyPeriod != null, };
-        if (_d.OnlyPeriod != null && _d.OnlyPeriod != _period.Code) only.Content = $"Mostrar solo en {_d.OnlyPeriod} (destildá para verlo en todos)";
-        ToolTip.SetTip(only, "Sin tildar, el dibujo se ve en todos los gráficos de este instrumento (todos los períodos)");
+        var only = new CheckBox { Content = L.F("Mostrar solo en {0}",_period.DisplayName), IsChecked = _d.OnlyPeriod != null, };
+        if (_d.OnlyPeriod != null && _d.OnlyPeriod != _period.Code) only.Content = L.F("Mostrar solo en {0} (destildá para verlo en todos)",_d.OnlyPeriod);
+        ToolTip.SetTip(only, L.T("Sin tildar, el dibujo se ve en todos los gráficos de este instrumento (todos los períodos)"));
         only.IsCheckedChanged += (_, _) =>
         {
             _d.OnlyPeriod = only.IsChecked == true ? _period.Code : null;
             Changed();
         };
-        var locked = new CheckBox { Content = "Bloquear (no se puede mover)", IsChecked = _d.Locked };
+        var locked = new CheckBox { Content = L.T("Bloquear (no se puede mover)"), IsChecked = _d.Locked };
         locked.IsCheckedChanged += (_, _) =>
         {
             _d.Locked = locked.IsChecked == true;
@@ -377,7 +377,7 @@ public sealed class DrawingSettingsWindow : Window
         var rows = new List<Control> { hidden, only, locked };
         if (_d.Kind is DrawingKind.HorizontalLine or DrawingKind.HorizontalRay)
         {
-            var alert = new CheckBox { Content = "Alerta cuando el precio la toque", IsChecked = _d.IsAlert };
+            var alert = new CheckBox { Content = L.T("Alerta cuando el precio la toque"), IsChecked = _d.IsAlert };
             alert.IsCheckedChanged += (_, _) =>
             {
                 _d.Alert = alert.IsChecked == true;
@@ -387,8 +387,8 @@ public sealed class DrawingSettingsWindow : Window
             rows.Add(alert);
         }
 
-        rows.Add(Note("Los dibujos se ven en todos los gráficos del mismo instrumento y se sincronizan al moverlos o editarlos."));
-        return Section("Visibilidad", rows.ToArray());
+        rows.Add(Note(L.T("Los dibujos se ven en todos los gráficos del mismo instrumento y se sincronizan al moverlos o editarlos.")));
+        return Section(L.T("Visibilidad"), rows.ToArray());
     }
 
     // ------------------------------------------------------------------ colores
@@ -408,8 +408,8 @@ public sealed class DrawingSettingsWindow : Window
 
         if (allowAuto)
         {
-            var auto = new Button { Content = "Auto", Padding = new Thickness(6, 1), MinHeight = 22, FontSize = 11 };
-            ToolTip.SetTip(auto, "Igual que la línea");
+            var auto = new Button { Content = L.T("Auto"), Padding = new Thickness(6, 1), MinHeight = 22, FontSize = 11 };
+            ToolTip.SetTip(auto, L.T("Igual que la línea"));
             auto.Click += (_, _) =>
             {
                 set(0);

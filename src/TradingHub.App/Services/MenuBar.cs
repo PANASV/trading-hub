@@ -102,31 +102,31 @@ internal sealed class MenuBar
     /// <summary>Un renglón del menú: clave estable, texto, si se puede tocar y qué hace (null = separador).</summary>
     private sealed record MenuLine(string Key, string? Text, bool Enabled = false, Action? Click = null);
 
-    private static readonly System.Globalization.CultureInfo Es = System.Globalization.CultureInfo.GetCultureInfo("es-AR");
+    private static readonly System.Globalization.CultureInfo Es = TradingHub.Common.Loc.Culture;
 
     private static string Money(decimal v) => v.ToString("+#,##0.00;-#,##0.00;0.00", Es);
 
     private List<MenuLine> MenuLines()
     {
-        var lines = new List<MenuLine> { new("hdr", $"Trading Hub · {_main.ConnectionSummary}") };
+        var lines = new List<MenuLine> { new("hdr", L.F("Trading Hub · {0}",_main.ConnectionSummary)) };
         int sep = 0;
         void Sep() => lines.Add(new MenuLine($"sep{++sep}", null));
 
         Sep();
         var running = _svc.Live.Entries(includeStopped: false).Where(e => e.Running).OrderBy(e => e.Locked).ThenBy(e => e.Info.Strategy).ToList();
-        lines.Add(new MenuLine("live", $"Estrategias en vivo ({running.Count})"));
+        lines.Add(new MenuLine("live", L.F("Estrategias en vivo ({0})",running.Count)));
         foreach (var e in running)
         {
             var r = e.Runner!;
             decimal pos = e.Ledger.Position;
             var plan = _svc.Live.PlanOf(e);
-            string side = pos == 0 ? "plana" : $"{(pos > 0 ? "largo" : "corto")} {Math.Abs(pos).ToString("0.####", Es)} {e.Ledger.OpenSymbol ?? plan.Symbol}";
-            string state = e.Paused ? " · pausada" : r.DailyLimitActive ? " · frenada por hoy" : "";
-            string each = plan.Units <= 0 ? "no abre" : $"{plan.Text} por orden{(plan.Micro ? " (micro)" : "")}";
-            lines.Add(new MenuLine($"s:{e.Key}", $"   {e.Info.Strategy} · {r.Data.Instrument.Symbol} · {each} · {side} · abierta {Money(e.OpenPnL)} · hoy {Money(r.TodayPnL)}{state}", true, ShowPanel));
+            string side = pos == 0 ? L.T("plana") : $"{(pos > 0 ? L.T("largo") : L.T("corto"))} {Math.Abs(pos).ToString("0.####", Es)} {e.Ledger.OpenSymbol ?? plan.Symbol}";
+            string state = e.Paused ? L.T(" · pausada") : r.DailyLimitActive ? L.T(" · frenada por hoy") : "";
+            string each = plan.Units <= 0 ? L.T("no abre") : L.F("{0} por orden{1}",plan.Text,(plan.Micro ? " (micro)" : ""));
+            lines.Add(new MenuLine(L.F("s:{0}",e.Key), L.F("   {0} · {1} · {2} · {3} · abierta {4} · hoy {5}{6}",e.Info.Strategy,r.Data.Instrument.Symbol,each,side,Money(e.OpenPnL),Money(r.TodayPnL),state), true, ShowPanel));
         }
 
-        if (running.Count == 0) lines.Add(new MenuLine("live-none", "   Ninguna corriendo"));
+        if (running.Count == 0) lines.Add(new MenuLine("live-none", L.T("   Ninguna corriendo")));
 
         Sep();
         var positions = new List<MenuLine>();
@@ -135,7 +135,7 @@ internal sealed class MenuBar
             try
             {
                 foreach (var p in _svc.AccountCenter.Snapshot(a).Positions.Where(p => p.Net != 0))
-                    positions.Add(new MenuLine($"p:{a.Id}:{p.Symbol}", $"   {p.Symbol} · {a.Name} · {(p.Net > 0 ? "largo" : "corto")} {Math.Abs(p.Net).ToString("0.####", Es)} · {Money(p.OpenPnl)}", true, ShowPanel));
+                    positions.Add(new MenuLine(L.F("p:{0}:{1}",a.Id,p.Symbol), $"   {p.Symbol} · {a.Name} · {(p.Net > 0 ? L.T("largo") : L.T("corto"))} {Math.Abs(p.Net).ToString("0.####", Es)} · {Money(p.OpenPnl)}", true, ShowPanel));
             }
             catch
             {
@@ -143,15 +143,15 @@ internal sealed class MenuBar
             }
         }
 
-        lines.Add(new MenuLine("pos", $"Posiciones abiertas ({positions.Count})"));
+        lines.Add(new MenuLine("pos", L.F("Posiciones abiertas ({0})",positions.Count)));
         lines.AddRange(positions);
-        if (positions.Count == 0) lines.Add(new MenuLine("pos-none", "   Sin posiciones"));
+        if (positions.Count == 0) lines.Add(new MenuLine("pos-none", L.T("   Sin posiciones")));
 
 
         Sep();
-        lines.Add(new MenuLine("panel", "Ver el panel en vivo…", true, ShowPanel));
-        lines.Add(new MenuLine("open", "Abrir Trading Hub", true, ShowMain));
-        lines.Add(new MenuLine("quit", "Salir de Trading Hub", true, Quit));
+        lines.Add(new MenuLine("panel", L.T("Ver el panel en vivo…"), true, ShowPanel));
+        lines.Add(new MenuLine("open", L.T("Abrir Trading Hub"), true, ShowMain));
+        lines.Add(new MenuLine("quit", L.T("Salir de Trading Hub"), true, Quit));
         return lines;
     }
 

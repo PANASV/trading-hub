@@ -32,13 +32,13 @@ internal sealed partial class StrategiesView
     }
 
     private static string PortfolioFile => Path.Combine(StrategyStore.Root, "portafolio.json");
-    private static readonly CultureInfo EsAr = CultureInfo.GetCultureInfo("es-AR");
+    private static readonly CultureInfo EsAr = TradingHub.Common.Loc.Culture;
 
     private PortfolioState _pf = new();
     private readonly List<PortfolioComponent> _pfComponents = new();
     private readonly StackPanel _pfList = new() { Spacing = 8 };
     private readonly WrapPanel _pfKpis = new() { ItemSpacing = 10, LineSpacing = 10 };
-    private readonly EquityChart _pfChart = new() { Height = 300, EmptyText = "Agregá al menos dos estrategias para ver la curva combinada" };
+    private readonly EquityChart _pfChart = new() { Height = 300, EmptyText = L.T("Agregá al menos dos estrategias para ver la curva combinada") };
     private readonly Grid _pfMatrix = new();
     private readonly TextBlock _pfNote = new() { Classes = { "faint", "small" }, TextWrapping = TextWrapping.Wrap };
     private readonly NumericUpDown _pfCapital = new() { Minimum = 100, Maximum = 100_000_000, Increment = 1000, FormatString = "N0", Width = 150 };
@@ -51,9 +51,9 @@ internal sealed partial class StrategiesView
     {
         _pfMode = new Ui.Segmented<string>(new[]
         {
-            ("equal", "Igual", (string?)"Todas con peso 1 (como en sus backtests)"),
-            ("risk", "Riesgo parejo", (string?)"Cada una pesa según la inversa de su volatilidad diaria"),
-            ("manual", "Manual", (string?)"Elegís el peso de cada una"),
+            ("equal", L.T("Igual"), (string?)L.T("Todas con peso 1 (como en sus backtests)")),
+            ("risk", L.T("Riesgo parejo"), (string?)L.T("Cada una pesa según la inversa de su volatilidad diaria")),
+            ("manual", "Manual", (string?)L.T("Elegís el peso de cada una")),
         });
         _pfMode.SelectionChanged += m =>
         {
@@ -68,24 +68,24 @@ internal sealed partial class StrategiesView
             RecomputePortfolio();
         };
 
-        _pfAdd = Ui.Button("Agregar", MaterialIconKind.Plus, () => { }, "primary");
+        _pfAdd = Ui.Button(L.T("Agregar"), MaterialIconKind.Plus, () => { }, "primary");
         _pfAdd.Flyout = new MenuFlyout();
         _pfAdd.Click += (_, _) => FillPortfolioMenu();
-        var suggest = Ui.Button("Sugerir combinación", MaterialIconKind.ScaleBalance, SuggestPortfolio);
-        ToolTip.SetTip(suggest, "Busca entre los últimos backtests de todas tus estrategias la combinación poco correlacionada (< 0,5) que más mejora el Sharpe");
-        var report = Ui.Button("Informe", MaterialIconKind.FileChartOutline, PortfolioReport);
-        ToolTip.SetTip(report, "Informe profesional del portafolio (se abre en Reportes)");
+        var suggest = Ui.Button(L.T("Sugerir combinación"), MaterialIconKind.ScaleBalance, SuggestPortfolio);
+        ToolTip.SetTip(suggest, L.T("Busca entre los últimos backtests de todas tus estrategias la combinación poco correlacionada (< 0,5) que más mejora el Sharpe"));
+        var report = Ui.Button(L.T("Informe"), MaterialIconKind.FileChartOutline, PortfolioReport);
+        ToolTip.SetTip(report, L.T("Informe profesional del portafolio (se abre en Reportes)"));
 
         _pfCapital.HorizontalAlignment = HorizontalAlignment.Left;
-        var intro = Ui.Faint("Combiná corridas guardadas de varias estrategias o instrumentos. Las que no están correlacionadas bajan el drawdown del conjunto.");
+        var intro = Ui.Faint(L.T("Combiná corridas guardadas de varias estrategias o instrumentos. Las que no están correlacionadas bajan el drawdown del conjunto."));
         intro.TextWrapping = TextWrapping.Wrap;
         var left = Ui.V(14,
-            Ui.H2("Portafolio"),
+            Ui.H2(L.T("Portafolio")),
             intro,
             Ui.H(8, _pfAdd, suggest),
-            Ui.Field("Pesos", _pfMode),
-            Ui.Field("Capital", _pfCapital),
-            Ui.H3("Estrategias"),
+            Ui.Field(L.T("Pesos"), _pfMode),
+            Ui.Field(L.T("Capital"), _pfCapital),
+            Ui.H3(L.T("Estrategias")),
             _pfList,
             report);
         left.Margin = new Thickness(18, 16);
@@ -93,8 +93,8 @@ internal sealed partial class StrategiesView
         var right = Ui.V(16,
             _pfKpis,
             Ui.Card(_pfChart, 8),
-            Ui.H3("Correlación de los resultados diarios"),
-            Ui.Faint("1 = se mueven igual · 0 = independientes · −1 = opuestas. Para diversificar conviene que estén por debajo de 0,5.").Also(t => t.TextWrapping = TextWrapping.Wrap),
+            Ui.H3(L.T("Correlación de los resultados diarios")),
+            Ui.Faint(L.T("1 = se mueven igual · 0 = independientes · −1 = opuestas. Para diversificar conviene que estén por debajo de 0,5.")).Also(t => t.TextWrapping = TextWrapping.Wrap),
             _pfMatrix,
             _pfNote);
         right.Margin = new Thickness(20, 16, 24, 24);
@@ -128,7 +128,7 @@ internal sealed partial class StrategiesView
         if (_pfAdd == null) return;
         var menu = new MenuFlyout();
         var runs = AvailableRuns();
-        if (runs.Count == 0) menu.Items.Add(new MenuItem { Header = "No hay backtests guardados todavía", IsEnabled = false });
+        if (runs.Count == 0) menu.Items.Add(new MenuItem { Header = L.T("No hay backtests guardados todavía"), IsEnabled = false });
         foreach (var g in runs.GroupBy(r => r.File))
         {
             var parent = new MenuItem { Header = g.Key.DisplayName, Icon = Ui.Icon(MaterialIconKind.RobotOutline, 15) };
@@ -137,7 +137,7 @@ internal sealed partial class StrategiesView
                 bool inside = _pf.Items.Any(i => i.RunId == r.Id);
                 var item = new MenuItem
                 {
-                    Header = $"{r.Symbol} {r.Period} · {r.FromUtc:dd/MM/yy}–{r.ToUtc:dd/MM/yy} · neto {r.NetProfit.ToString("N0", EsAr)} · Sharpe {r.Sharpe:0.00}",
+                    Header = L.F("{0} {1} · {2:dd/MM/yy}–{3:dd/MM/yy} · neto {4} · Sharpe {5:0.00}",r.Symbol,r.Period,r.FromUtc,r.ToUtc,r.NetProfit.ToString("N0", EsAr),r.Sharpe),
                     IsEnabled = !inside,
                     Icon = inside ? Ui.Icon(MaterialIconKind.Check, 15, Ui.Accent) : null,
                 };
@@ -245,7 +245,7 @@ internal sealed partial class StrategiesView
                 _pf.Items[index].Weight = c.Weight;
                 RecomputePortfolio();
             };
-            var remove = Ui.IconButton(MaterialIconKind.Close, "Sacar del portafolio", () =>
+            var remove = Ui.IconButton(MaterialIconKind.Close, L.T("Sacar del portafolio"), () =>
             {
                 _pf.Items.RemoveAt(index);
                 _pfComponents.RemoveAt(index);
@@ -258,16 +258,16 @@ internal sealed partial class StrategiesView
             head.Children.Add(new TextBlock { Text = $"{i + 1}. {c.StrategyName}", FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center });
             var info = new TextBlock
             {
-                Text = $"{c.Settings.Symbol} {c.Settings.Period} · {c.Settings.FromUtc:dd/MM/yy}–{c.Settings.ToUtc:dd/MM/yy}\nNeto {m.NetProfit.ToString("N0", EsAr)} · Sharpe {m.SharpeRatio:0.00} · DD {m.MaxDrawdown.ToString("N0", EsAr)} · {m.TotalTrades} ops",
+                Text = L.F("{0} {1} · {2:dd/MM/yy}–{3:dd/MM/yy}\nNeto {4} · Sharpe {5:0.00} · DD {6} · {7} ops",c.Settings.Symbol,c.Settings.Period,c.Settings.FromUtc,c.Settings.ToUtc,m.NetProfit.ToString("N0", EsAr),m.SharpeRatio,m.MaxDrawdown.ToString("N0", EsAr),m.TotalTrades),
                 Classes = { "faint", "small" },
                 TextWrapping = TextWrapping.Wrap,
             };
-            var wrow = Ui.H(8, new TextBlock { Text = "Peso", Classes = { "muted", "small" }, VerticalAlignment = VerticalAlignment.Center }, weight);
+            var wrow = Ui.H(8, new TextBlock { Text = L.T("Peso"), Classes = { "muted", "small" }, VerticalAlignment = VerticalAlignment.Center }, weight);
             _pfList.Children.Add(Ui.Card(Ui.V(6, head, info, wrow), 12));
         }
 
         if (_pfComponents.Count == 0)
-            _pfList.Children.Add(new TextBlock { Text = "Todavía no agregaste estrategias. Usá «Agregar» o «Sugerir combinación».", Classes = { "muted", "small" }, TextWrapping = TextWrapping.Wrap });
+            _pfList.Children.Add(new TextBlock { Text = L.T("Todavía no agregaste estrategias. Usá «Agregar» o «Sugerir combinación»."), Classes = { "muted", "small" }, TextWrapping = TextWrapping.Wrap });
 
         var r = _pfResult;
         if (r == null || _pfComponents.Count == 0)
@@ -282,11 +282,11 @@ internal sealed partial class StrategiesView
             new TextBlock { Text = value, FontSize = 20, FontWeight = FontWeight.Bold, Foreground = color ?? Ui.Text0 },
             new TextBlock { Text = sub, Classes = { "faint", "small" } }), 12).Also(b => b.MinWidth = 170);
         var pm = r.Metrics;
-        _pfKpis.Children.Add(Kpi("Neto del portafolio", pm.NetProfit.ToString("N2", EsAr), $"{pm.ReturnPercent:0.0} % · {pm.TotalTrades} ops", pm.NetProfit >= 0 ? Ui.Up : Ui.Down));
-        _pfKpis.Children.Add(Kpi("Sharpe", pm.SharpeRatio.ToString("0.00", EsAr), $"promedio individual {r.AverageComponentSharpe:0.00}"));
-        _pfKpis.Children.Add(Kpi("Drawdown máximo", pm.MaxDrawdown.ToString("N0", EsAr), $"suma individual {r.SumOfComponentDrawdowns.ToString("N0", EsAr)}"));
-        _pfKpis.Children.Add(Kpi("Reducción de drawdown", $"{r.DrawdownReductionPercent:0} %", "por diversificar", r.DrawdownReductionPercent > 0 ? Ui.Up : Ui.Text1));
-        _pfKpis.Children.Add(Kpi("Correlación promedio", r.AverageCorrelation.ToString("0.00", EsAr), $"máxima {r.MaxCorrelation:0.00}", r.MaxCorrelation > 0.5 ? Ui.Warn : Ui.Up));
+        _pfKpis.Children.Add(Kpi(L.T("Neto del portafolio"), pm.NetProfit.ToString("N2", EsAr), L.F("{0:0.0} % · {1} ops",pm.ReturnPercent,pm.TotalTrades), pm.NetProfit >= 0 ? Ui.Up : Ui.Down));
+        _pfKpis.Children.Add(Kpi("Sharpe", pm.SharpeRatio.ToString("0.00", EsAr), L.F("promedio individual {0:0.00}",r.AverageComponentSharpe)));
+        _pfKpis.Children.Add(Kpi(L.T("Drawdown máximo"), pm.MaxDrawdown.ToString("N0", EsAr), L.F("suma individual {0}",r.SumOfComponentDrawdowns.ToString("N0", EsAr))));
+        _pfKpis.Children.Add(Kpi(L.T("Reducción de drawdown"), $"{r.DrawdownReductionPercent:0} %", L.T("por diversificar"), r.DrawdownReductionPercent > 0 ? Ui.Up : Ui.Text1));
+        _pfKpis.Children.Add(Kpi(L.T("Correlación promedio"), r.AverageCorrelation.ToString("0.00", EsAr), L.F("máxima {0:0.00}",r.MaxCorrelation), r.MaxCorrelation > 0.5 ? Ui.Warn : Ui.Up));
 
         // curva combinada y la de cada estrategia
         var extra = new List<IReadOnlyList<decimal>>();
@@ -334,7 +334,7 @@ internal sealed partial class StrategiesView
                     Margin = new Thickness(3),
                     Child = new TextBlock { Text = v.ToString("0.00", EsAr), FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Foreground = Brushes.White },
                 };
-                ToolTip.SetTip(cell, $"{r.Components[i].Label} vs {r.Components[j].Label}: {v:0.00}");
+                ToolTip.SetTip(cell, L.F("{0} vs {1}: {2:0.00}",r.Components[i].Label,r.Components[j].Label,v));
                 Grid.SetRow(cell, i + 1);
                 Grid.SetColumn(cell, j + 1);
                 _pfMatrix.Children.Add(cell);
@@ -342,8 +342,8 @@ internal sealed partial class StrategiesView
         }
 
         _pfNote.Text = r.NoOverlap
-            ? "⚠ Estas corridas no comparten fechas: se sumó la unión de los períodos y la correlación no es confiable. Corré los backtests en el mismo rango."
-            : $"Período común: {r.From:dd/MM/yyyy} – {r.To:dd/MM/yyyy} ({r.Days.Count} días). Los resultados se suman día por día con el peso de cada estrategia.";
+            ? L.T("⚠ Estas corridas no comparten fechas: se sumó la unión de los períodos y la correlación no es confiable. Corré los backtests en el mismo rango.")
+            : L.F("Período común: {0:dd/MM/yyyy} – {1:dd/MM/yyyy} ({2} días). Los resultados se suman día por día con el peso de cada estrategia.",r.From,r.To,r.Days.Count);
     }
 
     private void SuggestPortfolio()
@@ -365,29 +365,29 @@ internal sealed partial class StrategiesView
 
         if (candidates.Count < 2)
         {
-            _status("Para sugerir un portafolio hacen falta backtests de al menos dos estrategias o instrumentos (con 5 operaciones o más).");
+            _status(L.T("Para sugerir un portafolio hacen falta backtests de al menos dos estrategias o instrumentos (con 5 operaciones o más)."));
             return;
         }
 
         var chosen = PortfolioAnalyzer.SuggestUncorrelated(candidates, _pf.Capital);
         if (chosen.Count == 0)
         {
-            _status("Ninguna estrategia tiene resultado positivo: no hay qué combinar todavía.");
+            _status(L.T("Ninguna estrategia tiene resultado positivo: no hay qué combinar todavía."));
             return;
         }
 
         _pf.Items = chosen.Select(i => new PortfolioItem { StrategyId = ids[i].StrategyId, RunId = ids[i].RunId }).ToList();
         LoadPortfolioComponents();
         _status(chosen.Count == 1
-            ? "Solo una estrategia mejora el conjunto: las demás están muy correlacionadas o pierden."
-            : $"Portafolio sugerido: {chosen.Count} estrategias poco correlacionadas entre {candidates.Count} candidatas.");
+            ? L.T("Solo una estrategia mejora el conjunto: las demás están muy correlacionadas o pierden.")
+            : L.F("Portafolio sugerido: {0} estrategias poco correlacionadas entre {1} candidatas.",chosen.Count,candidates.Count));
     }
 
     private void PortfolioReport()
     {
         if (_pfResult == null || _pfComponents.Count == 0)
         {
-            _status("Agregá estrategias al portafolio primero.");
+            _status(L.T("Agregá estrategias al portafolio primero."));
             return;
         }
 
@@ -395,7 +395,7 @@ internal sealed partial class StrategiesView
         {
             var input = new Lab.ReportInput
             {
-                Title = $"Portafolio de {_pfComponents.Count} estrategias",
+                Title = L.F("Portafolio de {0} estrategias",_pfComponents.Count),
                 Portfolio = _pfResult,
                 PortfolioCapital = _pf.Capital,
             };
@@ -406,7 +406,7 @@ internal sealed partial class StrategiesView
         }
         catch (Exception ex)
         {
-            _status("No se pudo armar el informe: " + ex.Message);
+            _status(L.T("No se pudo armar el informe: ") + ex.Message);
             CrashLog.Write(ex);
         }
     }

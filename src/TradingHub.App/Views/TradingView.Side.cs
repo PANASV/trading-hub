@@ -43,10 +43,10 @@ public sealed partial class TradingView
     private ChoiceButton<int>? _domStep;
 
     // stop y objetivos automáticos
-    private readonly CheckBox _bracketAuto = new() { Content = "Ponerlos solos al entrar" };
+    private readonly CheckBox _bracketAuto = new() { Content = L.T("Ponerlos solos al entrar") };
     private readonly NumericUpDown _slTicks = new() { Minimum = 0, Maximum = 100000, Increment = 1, FormatString = "0", Width = 96 };
     private readonly StackPanel _targetRows = new() { Spacing = 6 };
-    private readonly CheckBox _beAfterTp1 = new() { Content = "Stop a breakeven al llenar el objetivo 1" };
+    private readonly CheckBox _beAfterTp1 = new() { Content = L.T("Stop a breakeven al llenar el objetivo 1") };
     private readonly TextBlock _bracketSummary = new() { FontSize = 11, Classes = { "faint" }, TextWrapping = TextWrapping.Wrap };
     private BracketTemplate? _template;
 
@@ -86,7 +86,7 @@ public sealed partial class TradingView
     {
         var right = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
         foreach (var c in extra) right.Children.Add(c);
-        right.Children.Add(Ui.IconButton(MaterialIconKind.Close, "Ocultar (se vuelve a mostrar desde el botón de paneles de la barra)", close, 15));
+        right.Children.Add(Ui.IconButton(MaterialIconKind.Close, L.T("Ocultar (se vuelve a mostrar desde el botón de paneles de la barra)"), close, 15));
         var header = new DockPanel { Margin = new Thickness(14, 8, 8, 6) };
         DockPanel.SetDock(right, Dock.Right);
         header.Children.Add(right);
@@ -101,7 +101,7 @@ public sealed partial class TradingView
     {
         _domStep = new ChoiceButton<int>(MaterialIconKind.FormatLineSpacing,
             new[] { 1, 2, 5, 10, 25, 50, 100, 250, 500, 1000 }.Select(n => (n, $"{n} tick{(n > 1 ? "s" : "")}")),
-            "Agrupar precios del DOM", n => $"×{n}");
+            L.T("Agrupar precios del DOM"), n => $"×{n}");
         _domStep.MinHeight = 26;
         _domStep.Padding = new Thickness(8, 2);
         _domStep.Changed += n =>
@@ -113,25 +113,25 @@ public sealed partial class TradingView
         };
 
         var help = new Button { Content = Ui.Icon(MaterialIconKind.HelpCircleOutline, 15) }.Classes("icon");
-        ToolTip.SetTip(help, "Cómo operar con el DOM");
+        ToolTip.SetTip(help, L.T("Cómo operar con el DOM"));
         help.Flyout = new Flyout
         {
             Content = Ui.V(6,
-                Ui.H3("Operar con el DOM"),
-                Ui.Text("Clic en Bid: compra límite (o stop si es encima del precio)."),
-                Ui.Text("Clic en Ask: venta límite (o stop si es debajo del precio)."),
-                Ui.Text(Os.IsWindows ? "Clic derecho o Alt+clic: cancela las órdenes de ese precio." : "Clic derecho o ⌥ clic: cancela las órdenes de ese precio."),
-                Ui.Text("Arrastrá una orden propia para moverla."),
-                Ui.Text("Rueda: desplazar · botón de centrar: volver al precio."),
-                Ui.Faint("En Configurar DOM elegís columnas, tamaños, colores y si hace falta doble clic.")).Also(v => v.Margin = new Thickness(12)),
+                Ui.H3(L.T("Operar con el DOM")),
+                Ui.Text(L.T("Clic en Bid: compra límite (o stop si es encima del precio).")),
+                Ui.Text(L.T("Clic en Ask: venta límite (o stop si es debajo del precio).")),
+                Ui.Text(Os.IsWindows ? L.T("Clic derecho o Alt+clic: cancela las órdenes de ese precio.") : L.T("Clic derecho o ⌥ clic: cancela las órdenes de ese precio.")),
+                Ui.Text(L.T("Arrastrá una orden propia para moverla.")),
+                Ui.Text(L.T("Rueda: desplazar · botón de centrar: volver al precio.")),
+                Ui.Faint(L.T("En Configurar DOM elegís columnas, tamaños, colores y si hace falta doble clic."))).Also(v => v.Margin = new Thickness(12)),
         };
 
-        var buttonsToggle = Ui.IconButton(MaterialIconKind.GestureTapButton, "Mostrar u ocultar los botones de ejecución (mercado, límites, cancelar, cerrar)", ToggleDomButtons, 15);
+        var buttonsToggle = Ui.IconButton(MaterialIconKind.GestureTapButton, L.T("Mostrar u ocultar los botones de ejecución (mercado, límites, cancelar, cerrar)"), ToggleDomButtons, 15);
         var header = SectionHeader("DOM", () => SetPanel("dom", false),
             _domStep,
             buttonsToggle,
-            Ui.IconButton(MaterialIconKind.ImageFilterCenterFocus, "Centrar en el precio", () => _dom.Recenter(), 15),
-            Ui.IconButton(MaterialIconKind.Tune, "Configurar DOM (columnas, tamaños, colores)", () => OpenDomSettings(), 15),
+            Ui.IconButton(MaterialIconKind.ImageFilterCenterFocus, L.T("Centrar en el precio"), () => _dom.Recenter(), 15),
+            Ui.IconButton(MaterialIconKind.Tune, L.T("Configurar DOM (columnas, tamaños, colores)"), () => OpenDomSettings(), 15),
             BuildDetachButton("dom"),
             help);
         _dom.OrderRequested += OnDomOrder;
@@ -204,7 +204,7 @@ public sealed partial class TradingView
             if (price <= 0) price = data.LastPrice;
             if (price <= 0)
             {
-                _status("Todavía no hay precio del libro para esa orden");
+                _status(L.T("Todavía no hay precio del libro para esa orden"));
                 return;
             }
 
@@ -217,26 +217,26 @@ public sealed partial class TradingView
         _qtyPresets.VerticalAlignment = VerticalAlignment.Center;
         Grid.SetColumn(_qtyPresets, 2);
         qtyRow.Children.Add(_qtyPresets);
-        ToolTip.SetTip(_qty, "Cantidad de las órdenes del DOM y de estos botones");
+        ToolTip.SetTip(_qty, L.T("Cantidad de las órdenes del DOM y de estos botones"));
 
         var panel = Ui.V(6,
             qtyRow,
-            Row(B("Comprar MKT", "buy", "Compra a mercado", () => _ = TradeAsync(_active, OrderTypes.Market, OrderDirections.Buy, 0, QtyOf(_active))),
-                B("Vender MKT", "sell", "Venta a mercado", () => _ = TradeAsync(_active, OrderTypes.Market, OrderDirections.Sell, 0, QtyOf(_active)))),
-            Row(B("C. Bid", "buy-soft", "Compra límite en el bid (espera en la demanda)", () => AtBook(OrderDirections.Buy, ask: false)),
-                B("C. Ask", "buy-soft", "Compra límite en el ask (se llena enseguida, con precio tope)", () => AtBook(OrderDirections.Buy, ask: true)),
-                B("V. Bid", "sell-soft", "Venta límite en el bid (se llena enseguida, con precio tope)", () => AtBook(OrderDirections.Sell, ask: false)),
-                B("V. Ask", "sell-soft", "Venta límite en el ask (espera en la oferta)", () => AtBook(OrderDirections.Sell, ask: true))),
-            Row(B("Cancelar", "", "Cancela todas las órdenes", () => _ = AccountActionAsync(_active, a => a.CancelAll(), "Órdenes canceladas")),
-                B("Revertir", "", "Da vuelta la posición", () => _ = AccountActionAsync(_active, a => a.Reverse(), "Posición revertida")),
-                B("Cerrar", "primary", "Cierra toda la posición a mercado y cancela las órdenes", () => _ = AccountActionAsync(_active, a => a.Flatten(), "Posición cerrada"))));
+            Row(B(L.T("Comprar MKT"), "buy", L.T("Compra a mercado"), () => _ = TradeAsync(_active, OrderTypes.Market, OrderDirections.Buy, 0, QtyOf(_active))),
+                B(L.T("Vender MKT"), "sell", L.T("Venta a mercado"), () => _ = TradeAsync(_active, OrderTypes.Market, OrderDirections.Sell, 0, QtyOf(_active)))),
+            Row(B(L.T("C. Bid"), "buy-soft", L.T("Compra límite en el bid (espera en la demanda)"), () => AtBook(OrderDirections.Buy, ask: false)),
+                B(L.T("C. Ask"), "buy-soft", L.T("Compra límite en el ask (se llena enseguida, con precio tope)"), () => AtBook(OrderDirections.Buy, ask: true)),
+                B(L.T("V. Bid"), "sell-soft", L.T("Venta límite en el bid (se llena enseguida, con precio tope)"), () => AtBook(OrderDirections.Sell, ask: false)),
+                B(L.T("V. Ask"), "sell-soft", L.T("Venta límite en el ask (espera en la oferta)"), () => AtBook(OrderDirections.Sell, ask: true))),
+            Row(B(L.T("Cancelar"), "", L.T("Cancela todas las órdenes"), () => _ = AccountActionAsync(_active, a => a.CancelAll(), L.T("Órdenes canceladas"))),
+                B(L.T("Revertir"), "", L.T("Da vuelta la posición"), () => _ = AccountActionAsync(_active, a => a.Reverse(), L.T("Posición revertida"))),
+                B(L.T("Cerrar"), "primary", L.T("Cierra toda la posición a mercado y cancela las órdenes"), () => _ = AccountActionAsync(_active, a => a.Flatten(), L.T("Posición cerrada")))));
         panel.Margin = new Thickness(10, 8, 10, 10);
         return new Border { Child = panel, BorderBrush = Ui.Line, BorderThickness = new Thickness(0, 1, 0, 0), Background = Ui.Bg1 };
     }
 
     private Control BuildTapeSection()
     {
-        var header = SectionHeader("Cinta de operaciones", () => SetPanel("tape", false), BuildDetachButton("tape"));
+        var header = SectionHeader(L.T("Cinta de operaciones"), () => SetPanel("tape", false), BuildDetachButton("tape"));
         _tape.MinHeight = 50;
         var box = new DockPanel();
         DockPanel.SetDock(header, Dock.Top);
@@ -258,18 +258,18 @@ public sealed partial class TradingView
             return mi;
         }
 
-        Toggle("side", "Panel derecho");
+        Toggle("side", L.T("Panel derecho"));
         menu.Items.Add(new Separator());
-        Toggle("ticket", "Chart Trader");
+        Toggle("ticket", L.T("Chart Trader"));
         Toggle("dom", "DOM");
-        Toggle("tape", "Cinta de operaciones");
+        Toggle("tape", L.T("Cinta de operaciones"));
         menu.Items.Add(new Separator());
-        var cfg = new MenuItem { Header = "Configurar DOM…", Icon = Ui.Icon(MaterialIconKind.Tune, 15) };
+        var cfg = new MenuItem { Header = L.T("Configurar DOM…"), Icon = Ui.Icon(MaterialIconKind.Tune, 15) };
         cfg.Click += (_, _) => OpenDomSettings();
         menu.Items.Add(cfg);
 
         var b = new Button { Content = Ui.Icon(MaterialIconKind.PageLayoutSidebarRight, 18), Flyout = menu }.Classes("icon");
-        ToolTip.SetTip(b, "Paneles: ticket, DOM y cinta");
+        ToolTip.SetTip(b, L.T("Paneles: ticket, DOM y cinta"));
         return b;
     }
 
@@ -416,11 +416,11 @@ public sealed partial class TradingView
         };
 
         var buy = new Button { MinHeight = 48 }.Classes("buy");
-        buy.Content = Ui.V(0, new TextBlock { Text = "COMPRAR", FontWeight = FontWeight.Bold, HorizontalAlignment = HorizontalAlignment.Center }, _buyPrice);
+        buy.Content = Ui.V(0, new TextBlock { Text = L.T("COMPRAR"), FontWeight = FontWeight.Bold, HorizontalAlignment = HorizontalAlignment.Center }, _buyPrice);
         buy.Click += async (_, _) => await TradeAsync(_active, OrderTypes.Market, OrderDirections.Buy, 0);
         _buyButton = buy;
         var sell = new Button { MinHeight = 48 }.Classes("sell");
-        sell.Content = Ui.V(0, new TextBlock { Text = "VENDER", FontWeight = FontWeight.Bold, HorizontalAlignment = HorizontalAlignment.Center }, _sellPrice);
+        sell.Content = Ui.V(0, new TextBlock { Text = L.T("VENDER"), FontWeight = FontWeight.Bold, HorizontalAlignment = HorizontalAlignment.Center }, _sellPrice);
         sell.Click += async (_, _) => await TradeAsync(_active, OrderTypes.Market, OrderDirections.Sell, 0);
         var buySell = Ui.Row(10, sell, buy);
 
@@ -433,19 +433,19 @@ public sealed partial class TradingView
         }
 
         var actions = Ui.Row(8,
-            Small("Cerrar", "Cierra toda la posición a mercado y cancela las órdenes", () => _ = AccountActionAsync(_active, acc => acc.Flatten(), "Posición cerrada")),
-            Small("Revertir", "Da vuelta la posición", () => _ = AccountActionAsync(_active, acc => acc.Reverse(), "Posición revertida")),
-            Small("Cancelar", "Cancela todas las órdenes", () => _ = AccountActionAsync(_active, acc => acc.CancelAll(), "Órdenes canceladas")));
+            Small(L.T("Cerrar"), L.T("Cierra toda la posición a mercado y cancela las órdenes"), () => _ = AccountActionAsync(_active, acc => acc.Flatten(), L.T("Posición cerrada"))),
+            Small(L.T("Revertir"), L.T("Da vuelta la posición"), () => _ = AccountActionAsync(_active, acc => acc.Reverse(), L.T("Posición revertida"))),
+            Small(L.T("Cancelar"), L.T("Cancela todas las órdenes"), () => _ = AccountActionAsync(_active, acc => acc.CancelAll(), L.T("Órdenes canceladas"))));
 
         // parciales: cierran una parte a mercado; stop y objetivos se ajustan solos
         var partials = Ui.Row(6,
-            Small("25%", "Cerrar el 25% de la posición a mercado", () => _ = BracketActionAsync(_active, b => b.ClosePartial(0.25m), "Cerrar el 25% de la posición")),
-            Small("50%", "Cerrar la mitad de la posición a mercado", () => _ = BracketActionAsync(_active, b => b.ClosePartial(0.5m), "Cerrar la mitad de la posición")),
-            Small("75%", "Cerrar el 75% de la posición a mercado", () => _ = BracketActionAsync(_active, b => b.ClosePartial(0.75m), "Cerrar el 75% de la posición")),
-            Small("BE", "Mover el stop a breakeven (precio de entrada)", () => _ = BracketActionAsync(_active, b => b.MoveStopToBreakeven(), "Mover el stop a breakeven")));
+            Small("25%", L.T("Cerrar el 25% de la posición a mercado"), () => _ = BracketActionAsync(_active, b => b.ClosePartial(0.25m), L.T("Cerrar el 25% de la posición"))),
+            Small("50%", L.T("Cerrar la mitad de la posición a mercado"), () => _ = BracketActionAsync(_active, b => b.ClosePartial(0.5m), L.T("Cerrar la mitad de la posición"))),
+            Small("75%", L.T("Cerrar el 75% de la posición a mercado"), () => _ = BracketActionAsync(_active, b => b.ClosePartial(0.75m), L.T("Cerrar el 75% de la posición"))),
+            Small("BE", L.T("Mover el stop a breakeven (precio de entrada)"), () => _ = BracketActionAsync(_active, b => b.MoveStopToBreakeven(), L.T("Mover el stop a breakeven"))));
 
-        var partialRow = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*") };
-        partialRow.Children.Add(new TextBlock { Text = "Parcial", VerticalAlignment = VerticalAlignment.Center, Classes = { "muted" }, Margin = new Thickness(0, 0, 10, 0) });
+        var partialRow = new Grid { ColumnDefinitions = new ColumnDefinitions(L.T("Auto,*")) };
+        partialRow.Children.Add(new TextBlock { Text = L.T("Parcial"), VerticalAlignment = VerticalAlignment.Center, Classes = { "muted" }, Margin = new Thickness(0, 0, 10, 0) });
         Grid.SetColumn(partials, 1);
         partialRow.Children.Add(partials);
 
@@ -463,7 +463,7 @@ public sealed partial class TradingView
         // (los controles viejos de arriba siguen armados porque el DOM y los atajos usan su cantidad, pero se muestra el Chart Trader)
         _ = panel;
         var box = new DockPanel();
-        var header = SectionHeader("Chart Trader", () => SetPanel("ticket", false), BuildDetachButton("ticket"));
+        var header = SectionHeader(L.T("Chart Trader"), () => SetPanel("ticket", false), BuildDetachButton("ticket"));
         DockPanel.SetDock(header, Dock.Top);
         box.Children.Add(header);
         box.Children.Add(_dockedTraderHost);
@@ -475,37 +475,37 @@ public sealed partial class TradingView
         _bracketAuto.IsCheckedChanged += (_, _) => EditTemplate(t => t.Enabled = _bracketAuto.IsChecked == true);
         _slTicks.ValueChanged += (_, _) => EditTemplate(t => t.StopTicks = (int)(_slTicks.Value ?? 0));
         _beAfterTp1.IsCheckedChanged += (_, _) => EditTemplate(t => t.BreakevenAfterFirstTarget = _beAfterTp1.IsChecked == true);
-        ToolTip.SetTip(_bracketAuto, "Al abrir una posición (o al llenarse una orden de entrada) se ponen el stop y los objetivos de abajo, en ticks desde la entrada.");
+        ToolTip.SetTip(_bracketAuto, L.T("Al abrir una posición (o al llenarse una orden de entrada) se ponen el stop y los objetivos de abajo, en ticks desde la entrada."));
 
         var slRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
-        slRow.Children.Add(new TextBlock { Text = "Stop loss (ticks)", VerticalAlignment = VerticalAlignment.Center, Classes = { "muted" } });
+        slRow.Children.Add(new TextBlock { Text = L.T("Stop loss (ticks)"), VerticalAlignment = VerticalAlignment.Center, Classes = { "muted" } });
         Grid.SetColumn(_slTicks, 1);
         slRow.Children.Add(_slTicks);
 
-        var addTarget = Ui.Button("Objetivo", MaterialIconKind.Plus, () => EditTemplate(t =>
+        var addTarget = Ui.Button(L.T("Objetivo"), MaterialIconKind.Plus, () => EditTemplate(t =>
         {
             if (t.Targets.Count >= 3) return;
             int last = t.Targets.Count > 0 ? t.Targets.Max(x => x.Ticks) : t.StopTicks;
             t.Targets.Add(new BracketTarget { Ticks = Math.Max(1, last * 2), Percent = 0 });
             Rebalance(t);
         }, rebuild: true));
-        ToolTip.SetTip(addTarget, "Hasta 3 objetivos parciales; los porcentajes se reparten la posición");
+        ToolTip.SetTip(addTarget, L.T("Hasta 3 objetivos parciales; los porcentajes se reparten la posición"));
 
-        var apply = Ui.Button("Aplicar a la posición", MaterialIconKind.ShieldOutline, () => _ = BracketActionAsync(_active, b => b.ApplyTemplate(), "Poner el stop y los objetivos a la posición"));
-        ToolTip.SetTip(apply, "Reemplaza el stop y los objetivos de la posición abierta por los de la plantilla");
+        var apply = Ui.Button(L.T("Aplicar a la posición"), MaterialIconKind.ShieldOutline, () => _ = BracketActionAsync(_active, b => b.ApplyTemplate(), L.T("Poner el stop y los objetivos a la posición")));
+        ToolTip.SetTip(apply, L.T("Reemplaza el stop y los objetivos de la posición abierta por los de la plantilla"));
 
         var content = Ui.V(10,
             _bracketAuto,
             slRow,
-            new TextBlock { Text = "Objetivos (ticks · % de la posición)", Classes = { "muted" } },
+            new TextBlock { Text = L.T("Objetivos (ticks · % de la posición)"), Classes = { "muted" } },
             _targetRows,
             Ui.H(8, addTarget, apply),
             _beAfterTp1,
-            Ui.Faint("En el gráfico: arrastrá los botones SL / TP de la posición o de una orden pendiente para ponerlos a mano. Arrastrá desde la línea de la posición: hacia la ganancia crea un objetivo; hacia la pérdida, el stop."));
+            Ui.Faint(L.T("En el gráfico: arrastrá los botones SL / TP de la posición o de una orden pendiente para ponerlos a mano. Arrastrá desde la línea de la posición: hacia la ganancia crea un objetivo; hacia la pérdida, el stop.")));
         foreach (var tb in content.Children.OfType<TextBlock>()) tb.TextWrapping = TextWrapping.Wrap;
         return new Expander
         {
-            Header = Ui.H(8, Ui.Icon(MaterialIconKind.TargetVariant, 15), new TextBlock { Text = "Stop y objetivos (OCO)", VerticalAlignment = VerticalAlignment.Center }, _bracketSummary),
+            Header = Ui.H(8, Ui.Icon(MaterialIconKind.TargetVariant, 15), new TextBlock { Text = L.T("Stop y objetivos (OCO)"), VerticalAlignment = VerticalAlignment.Center }, _bracketSummary),
             Content = content,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             IsExpanded = false,
@@ -545,7 +545,7 @@ public sealed partial class TradingView
             var pct = new NumericUpDown { Minimum = 1, Maximum = 100, Increment = 5, FormatString = "0", Value = target.Percent, MinWidth = 80 };
             ticks.ValueChanged += (_, _) => EditTemplate(_ => target.Ticks = (int)(ticks.Value ?? 1));
             pct.ValueChanged += (_, _) => EditTemplate(_ => target.Percent = pct.Value ?? 100);
-            var remove = Ui.IconButton(MaterialIconKind.Close, "Quitar este objetivo", () => EditTemplate(tt =>
+            var remove = Ui.IconButton(MaterialIconKind.Close, L.T("Quitar este objetivo"), () => EditTemplate(tt =>
             {
                 tt.Targets.Remove(target);
                 Rebalance(tt);
@@ -568,7 +568,7 @@ public sealed partial class TradingView
     private void UpdateBracketSummary()
     {
         var t = _template;
-        _bracketSummary.Text = t == null || !t.Enabled ? "" : $"· {t.StopTicks}t / {string.Join(" ", t.Targets.Select(x => x.Ticks + "t"))}";
+        _bracketSummary.Text = t == null || !t.Enabled ? "" : L.F("· {0}t / {1}",t.StopTicks,string.Join(" ", t.Targets.Select(x => x.Ticks + "t")));
     }
 
     // ===================================================================== enlace con el gráfico activo
@@ -613,7 +613,7 @@ public sealed partial class TradingView
         Ui.SyncAccounts(_accountBox, AccountOptions(tab, data), tab.AccountId);
         _syncing = false;
         _accountWarning.IsVisible = account.IsReal;
-        _accountWarning.Text = "Cuenta REAL: las órdenes van al mercado con tu dinero.";
+        _accountWarning.Text = L.T("Cuenta REAL: las órdenes van al mercado con tu dinero.");
 
         // cantidades sugeridas según el instrumento
         decimal step = data.Instrument.VolumeStep;
@@ -675,7 +675,7 @@ public sealed partial class TradingView
             var inst = list.FirstOrDefault(i => i.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase));
             if (inst == null)
             {
-                _status($"No encontré {symbol} en esta conexión");
+                _status(L.F("No encontré {0} en esta conexión",symbol));
                 return;
             }
 
@@ -688,8 +688,8 @@ public sealed partial class TradingView
         chart.Trader?.Rebind();
         if (save) Workspace.Save(this);
         _status(chart.CrossSymbol != null
-            ? $"Cross trading: mirás {chart.Symbol} y las órdenes de este gráfico van a {chart.CrossSymbol}"
-            : $"Las órdenes de este gráfico van a {chart.Symbol}");
+            ? L.F("Cross trading: mirás {0} y las órdenes de este gráfico van a {1}",chart.Symbol,chart.CrossSymbol)
+            : L.F("Las órdenes de este gráfico van a {0}",chart.Symbol));
     }
 
     internal void SetChartAccount(ChartTab chart, string accountId)
@@ -733,13 +733,13 @@ public sealed partial class TradingView
         var profile = _svc.Connections.FindForAccount(chart.AccountId);
         if (checkQuantity && profile?.MaxOrderQuantity > 0 && (qty > 0 ? qty : QtyOf(chart)) > profile.MaxOrderQuantity)
         {
-            _status($"Orden bloqueada: supera la cantidad máxima configurada ({profile.MaxOrderQuantity}).");
+            _status(L.F("Orden bloqueada: supera la cantidad máxima configurada ({0}).",profile.MaxOrderQuantity));
             return false;
         }
 
         if (profile?.ConfirmOrders == false && !_svc.Settings.ConfirmRealOrders) return true;
         var owner = chart.Window ?? TopLevel.GetTopLevel(this) as Window;
-        return owner != null && await ConfirmDialog.ShowAsync(owner, "Confirmar orden REAL", $"{description}\nCuenta: {acc.Name}", "Enviar orden", danger: true);
+        return owner != null && await ConfirmDialog.ShowAsync(owner, L.T("Confirmar orden REAL"), L.F("{0}\nCuenta: {1}",description,acc.Name), L.T("Enviar orden"), danger: true);
     }
 
     private static bool IsEntry(ITradingAccount acc, OrderDirections dir) =>
@@ -752,11 +752,11 @@ public sealed partial class TradingView
         decimal qty = quantity is > 0 ? quantity.Value : QtyOf(chart);
         if (qty <= 0)
         {
-            _status("Poné una cantidad mayor a cero");
+            _status(L.T("Poné una cantidad mayor a cero"));
             return null;
         }
 
-        string desc = $"{(dir == OrderDirections.Buy ? "COMPRA" : "VENTA")} {type switch { OrderTypes.Market => "a mercado", OrderTypes.Limit => "límite", _ => "stop" }} {qty} {acc.Instrument.Symbol}{(price > 0 ? " @ " + acc.Instrument.FormatPrice(price) : "")}";
+        string desc = $"{(dir == OrderDirections.Buy ? L.T("COMPRA") : L.T("VENTA"))} {type switch { OrderTypes.Market => L.T("a mercado"), OrderTypes.Limit => L.T("límite"), _ => "stop" }} {qty} {acc.Instrument.Symbol}{(price > 0 ? " @ " + acc.Instrument.FormatPrice(price) : "")}";
         if (!await ConfirmAsync(chart, acc, desc, qty: qty)) return null;
         bool entry = IsEntry(acc, dir);
         var order = type switch
@@ -778,7 +778,7 @@ public sealed partial class TradingView
     {
         var acc = AccountOf(chart);
         if (acc == null || chart == null) return;
-        string desc = $"Mover orden {(order.Direction == OrderDirections.Buy ? "de compra" : "de venta")} a {acc.Instrument.FormatPrice(price)}";
+        string desc = L.F("Mover orden {0} a {1}",(order.Direction == OrderDirections.Buy ? L.T("de compra") : L.T("de venta")),acc.Instrument.FormatPrice(price));
         if (!await ConfirmAsync(chart, acc, desc, checkQuantity: false)) return;
         _status(_svc.BracketsFor(acc).Move(order, price));
         chart.Model?.Invalidate();
@@ -795,7 +795,7 @@ public sealed partial class TradingView
         else if (d.Entry != null) msg = br.AttachToEntry(d.Entry, price, d.Role);
         else
         {
-            if (!await ConfirmAsync(chart, acc, $"Poner stop/objetivo en {acc.Instrument.FormatPrice(price)}", checkQuantity: false)) return;
+            if (!await ConfirmAsync(chart, acc, L.F("Poner stop/objetivo en {0}",acc.Instrument.FormatPrice(price)), checkQuantity: false)) return;
             msg = br.DropFromPosition(price, d.Role);
         }
 
@@ -831,7 +831,7 @@ public sealed partial class TradingView
         if (cancel)
         {
             acc.CancelAt(price);
-            _status($"Órdenes canceladas en {acc.Instrument.FormatPrice(price)}");
+            _status(L.F("Órdenes canceladas en {0}",acc.Instrument.FormatPrice(price)));
             return;
         }
 
@@ -875,13 +875,13 @@ public sealed partial class TradingView
             case "sell-market": _ = TradeAsync(chart, OrderTypes.Market, OrderDirections.Sell, 0); break;
             case "buy-bid": _ = TradeAsync(chart, OrderTypes.Limit, OrderDirections.Buy, Best(true)); break;
             case "sell-ask": _ = TradeAsync(chart, OrderTypes.Limit, OrderDirections.Sell, Best(false)); break;
-            case "flatten": _ = AccountActionAsync(chart, a => a.Flatten(), "Posición cerrada"); break;
-            case "reverse": _ = AccountActionAsync(chart, a => a.Reverse(), "Posición revertida"); break;
-            case "cancel-all": _ = AccountActionAsync(chart, a => a.CancelAll(), "Órdenes canceladas"); break;
-            case "close-25": _ = BracketActionAsync(chart, b => b.ClosePartial(0.25m), "Cerrar el 25% de la posición"); break;
-            case "close-50": _ = BracketActionAsync(chart, b => b.ClosePartial(0.5m), "Cerrar la mitad de la posición"); break;
-            case "breakeven": _ = BracketActionAsync(chart, b => b.MoveStopToBreakeven(), "Mover el stop a breakeven"); break;
-            case "brackets": _ = BracketActionAsync(chart, b => b.ApplyTemplate(), "Poner el stop y los objetivos"); break;
+            case "flatten": _ = AccountActionAsync(chart, a => a.Flatten(), L.T("Posición cerrada")); break;
+            case "reverse": _ = AccountActionAsync(chart, a => a.Reverse(), L.T("Posición revertida")); break;
+            case "cancel-all": _ = AccountActionAsync(chart, a => a.CancelAll(), L.T("Órdenes canceladas")); break;
+            case "close-25": _ = BracketActionAsync(chart, b => b.ClosePartial(0.25m), L.T("Cerrar el 25% de la posición")); break;
+            case "close-50": _ = BracketActionAsync(chart, b => b.ClosePartial(0.5m), L.T("Cerrar la mitad de la posición")); break;
+            case "breakeven": _ = BracketActionAsync(chart, b => b.MoveStopToBreakeven(), L.T("Mover el stop a breakeven")); break;
+            case "brackets": _ = BracketActionAsync(chart, b => b.ApplyTemplate(), L.T("Poner el stop y los objetivos")); break;
             case "qty-next":
             case "qty-prev":
             {
@@ -892,7 +892,7 @@ public sealed partial class TradingView
                 chart.Quantity = next;
                 chart.Trader?.SyncQuantity();
                 OnChartQuantityChanged(chart);
-                _status($"Cantidad: {next.ToString("0.####", CultureInfo.InvariantCulture)}");
+                _status(L.F("Cantidad: {0}",next.ToString("0.####", CultureInfo.InvariantCulture)));
                 break;
             }
 
@@ -934,7 +934,7 @@ public sealed partial class TradingView
             case "toggle-dom": TogglePanel("dom"); break;
             case "toggle-trader":
                 SetTraderVisible(chart, !chart.TraderVisible);
-                _status(chart.TraderVisible ? $"Chart Trader de {chart.Caption} a la vista" : $"Chart Trader de {chart.Caption} oculto");
+                _status(chart.TraderVisible ? L.F("Chart Trader de {0} a la vista",chart.Caption) : L.F("Chart Trader de {0} oculto",chart.Caption));
                 break;
             case "toggle-panel": TogglePanel("side"); break;
             default: return false;
@@ -959,29 +959,29 @@ public sealed partial class TradingView
         if (br != null && ctrl?.OrderAt(x, y) is { } order)
         {
             var role = br.RoleOf(order);
-            items.Add(Item(role switch { BracketRole.StopLoss => "Cancelar el stop loss", BracketRole.Target => "Cancelar el objetivo", _ => "Cancelar la orden" },
+            items.Add(Item(role switch { BracketRole.StopLoss => L.T("Cancelar el stop loss"), BracketRole.Target => L.T("Cancelar el objetivo"), _ => L.T("Cancelar la orden") },
                 MaterialIconKind.CloseCircleOutline, () => _status(br.CancelBracket(order))));
             if (role == BracketRole.Target)
             {
-                var qty = new MenuItem { Header = "Cantidad del objetivo", Icon = Ui.Icon(MaterialIconKind.ScaleBalance, 16) };
+                var qty = new MenuItem { Header = L.T("Cantidad del objetivo"), Icon = Ui.Icon(MaterialIconKind.ScaleBalance, 16) };
                 foreach (var f in new[] { 0.25m, 0.5m, 0.75m, 1m })
-                    qty.Items.Add(Item($"{f * 100:0}% de la posición", null, () => _status(br.SetTargetFraction(order, f))));
+                    qty.Items.Add(Item(L.F("{0:0}% de la posición",f * 100), null, () => _status(br.SetTargetFraction(order, f))));
                 items.Add(qty);
             }
 
-            if (role == BracketRole.StopLoss) items.Add(Item("Stop a breakeven", MaterialIconKind.ShieldOutline, () => _ = BracketActionAsync(tab, b => b.MoveStopToBreakeven(), "Mover el stop a breakeven")));
+            if (role == BracketRole.StopLoss) items.Add(Item(L.T("Stop a breakeven"), MaterialIconKind.ShieldOutline, () => _ = BracketActionAsync(tab, b => b.MoveStopToBreakeven(), L.T("Mover el stop a breakeven"))));
             if (role == BracketRole.None && !order.ReduceOnly && IsEntry(acc!, order.Direction))
-                items.Add(Item("Adjuntar stop y objetivos de la plantilla", MaterialIconKind.TargetVariant, () =>
+                items.Add(Item(L.T("Adjuntar stop y objetivos de la plantilla"), MaterialIconKind.TargetVariant, () =>
                 {
                     br.AttachTemplate(order);
-                    _status("Stop y objetivos adjuntos: se envían cuando se llene la orden");
+                    _status(L.T("Stop y objetivos adjuntos: se envían cuando se llene la orden"));
                     model.Invalidate();
                 }));
             items.Add(new Separator());
         }
         else if (br != null && ctrl?.HandleAt(x, y, false) is { Drag.Pending: { } pb } handle)
         {
-            items.Add(Item(handle.Drag.Index < 0 ? "Quitar el stop adjunto" : "Quitar el objetivo adjunto", MaterialIconKind.CloseCircleOutline, () =>
+            items.Add(Item(handle.Drag.Index < 0 ? L.T("Quitar el stop adjunto") : L.T("Quitar el objetivo adjunto"), MaterialIconKind.CloseCircleOutline, () =>
             {
                 br.RemovePending(pb, handle.Drag.Index);
                 model.Invalidate();
@@ -992,31 +992,31 @@ public sealed partial class TradingView
         // posición abierta
         if (br != null && acc!.Position.Volume != 0)
         {
-            items.Add(Item("Cerrar la mitad a mercado", MaterialIconKind.ContentCut, () => _ = BracketActionAsync(tab, b => b.ClosePartial(0.5m), "Cerrar la mitad de la posición")));
-            items.Add(Item("Cerrar todo a mercado", MaterialIconKind.CloseBoxOutline, () => _ = AccountActionAsync(tab, a => a.Flatten(), "Posición cerrada")));
-            items.Add(Item("Stop a breakeven", MaterialIconKind.ShieldOutline, () => _ = BracketActionAsync(tab, b => b.MoveStopToBreakeven(), "Mover el stop a breakeven")));
-            items.Add(Item("Poner stop y objetivos de la plantilla", MaterialIconKind.TargetVariant, () => _ = BracketActionAsync(tab, b => b.ApplyTemplate(), "Poner el stop y los objetivos")));
+            items.Add(Item(L.T("Cerrar la mitad a mercado"), MaterialIconKind.ContentCut, () => _ = BracketActionAsync(tab, b => b.ClosePartial(0.5m), L.T("Cerrar la mitad de la posición"))));
+            items.Add(Item(L.T("Cerrar todo a mercado"), MaterialIconKind.CloseBoxOutline, () => _ = AccountActionAsync(tab, a => a.Flatten(), L.T("Posición cerrada"))));
+            items.Add(Item(L.T("Stop a breakeven"), MaterialIconKind.ShieldOutline, () => _ = BracketActionAsync(tab, b => b.MoveStopToBreakeven(), L.T("Mover el stop a breakeven"))));
+            items.Add(Item(L.T("Poner stop y objetivos de la plantilla"), MaterialIconKind.TargetVariant, () => _ = BracketActionAsync(tab, b => b.ApplyTemplate(), L.T("Poner el stop y los objetivos"))));
             items.Add(new Separator());
         }
 
         var sel = model.Drawings.FirstOrDefault(d => d.Selected && d.IsVisibleOn(model.Period));
         if (sel != null)
         {
-            items.Add(Item("Configurar dibujo…", MaterialIconKind.TuneVariant, () => EditDrawing(tab, sel)));
-            items.Add(Item("Borrar dibujo", MaterialIconKind.DeleteOutline, () => { model.Drawings.Remove(sel); DrawingsTouched(tab); }));
-            items.Add(Item(sel.Locked ? "Desbloquear" : "Bloquear", MaterialIconKind.LockOutline, () => { sel.Locked = !sel.Locked; DrawingsTouched(tab); }));
-            items.Add(Item(sel.EffectiveLineStyle == LineStyleKind.Solid ? "Línea punteada" : "Línea sólida", MaterialIconKind.Minus, () =>
+            items.Add(Item(L.T("Configurar dibujo…"), MaterialIconKind.TuneVariant, () => EditDrawing(tab, sel)));
+            items.Add(Item(L.T("Borrar dibujo"), MaterialIconKind.DeleteOutline, () => { model.Drawings.Remove(sel); DrawingsTouched(tab); }));
+            items.Add(Item(sel.Locked ? L.T("Desbloquear") : L.T("Bloquear"), MaterialIconKind.LockOutline, () => { sel.Locked = !sel.Locked; DrawingsTouched(tab); }));
+            items.Add(Item(sel.EffectiveLineStyle == LineStyleKind.Solid ? L.T("Línea punteada") : L.T("Línea sólida"), MaterialIconKind.Minus, () =>
             {
                 sel.LineStyle = sel.EffectiveLineStyle == LineStyleKind.Solid ? LineStyleKind.Dashed : LineStyleKind.Solid;
                 sel.Dashed = false;
                 DrawingsTouched(tab);
             }));
-            var colors = new MenuItem { Header = "Color", Icon = Ui.Icon(MaterialIconKind.Palette, 16) };
-            foreach (var (name, c) in new[] { ("Azul", 0xFF3D8BFDu), ("Ámbar", 0xFFF2B53Au), ("Verde", 0xFF26C281u), ("Rojo", 0xFFF0525Au), ("Blanco", 0xFFFFFFFFu), ("Violeta", 0xFFB478FFu) })
+            var colors = new MenuItem { Header = L.T("Color"), Icon = Ui.Icon(MaterialIconKind.Palette, 16) };
+            foreach (var (name, c) in new[] { (L.T("Azul"), 0xFF3D8BFDu), (L.T("Ámbar"), 0xFFF2B53Au), (L.T("Verde"), 0xFF26C281u), (L.T("Rojo"), 0xFFF0525Au), (L.T("Blanco"), 0xFFFFFFFFu), (L.T("Violeta"), 0xFFB478FFu) })
                 colors.Items.Add(Item(name, null, () => { sel.ColorArgb = c; DrawingsTouched(tab); }));
             items.Add(colors);
             if (sel.Kind is DrawingKind.HorizontalLine or DrawingKind.HorizontalRay)
-                items.Add(Item(sel.IsAlert ? "Quitar alerta" : "Alertar cuando el precio toque", MaterialIconKind.BellOutline, () =>
+                items.Add(Item(sel.IsAlert ? L.T("Quitar alerta") : L.T("Alertar cuando el precio toque"), MaterialIconKind.BellOutline, () =>
                 {
                     if (sel.IsAlert)
                     {
@@ -1037,34 +1037,34 @@ public sealed partial class TradingView
             string ps = model.Instrument.FormatPrice(price);
             if (price < last)
             {
-                items.Add(Item($"Comprar límite {QtyOf(tab)} @ {ps}", MaterialIconKind.ArrowUpBold, () => _ = TradeAsync(tab, OrderTypes.Limit, OrderDirections.Buy, price)));
-                items.Add(Item($"Vender stop {QtyOf(tab)} @ {ps}", MaterialIconKind.ArrowDownBold, () => _ = TradeAsync(tab, OrderTypes.Stop, OrderDirections.Sell, price)));
+                items.Add(Item(L.F("Comprar límite {0} @ {1}",QtyOf(tab),ps), MaterialIconKind.ArrowUpBold, () => _ = TradeAsync(tab, OrderTypes.Limit, OrderDirections.Buy, price)));
+                items.Add(Item(L.F("Vender stop {0} @ {1}",QtyOf(tab),ps), MaterialIconKind.ArrowDownBold, () => _ = TradeAsync(tab, OrderTypes.Stop, OrderDirections.Sell, price)));
             }
             else
             {
-                items.Add(Item($"Vender límite {QtyOf(tab)} @ {ps}", MaterialIconKind.ArrowDownBold, () => _ = TradeAsync(tab, OrderTypes.Limit, OrderDirections.Sell, price)));
-                items.Add(Item($"Comprar stop {QtyOf(tab)} @ {ps}", MaterialIconKind.ArrowUpBold, () => _ = TradeAsync(tab, OrderTypes.Stop, OrderDirections.Buy, price)));
+                items.Add(Item(L.F("Vender límite {0} @ {1}",QtyOf(tab),ps), MaterialIconKind.ArrowDownBold, () => _ = TradeAsync(tab, OrderTypes.Limit, OrderDirections.Sell, price)));
+                items.Add(Item(L.F("Comprar stop {0} @ {1}",QtyOf(tab),ps), MaterialIconKind.ArrowUpBold, () => _ = TradeAsync(tab, OrderTypes.Stop, OrderDirections.Buy, price)));
             }
 
-            items.Add(Item($"Alerta de precio en {ps}", MaterialIconKind.BellPlusOutline, () =>
+            items.Add(Item(L.F("Alerta de precio en {0}",ps), MaterialIconKind.BellPlusOutline, () =>
             {
                 model.Drawings.Add(new ChartDrawing { Kind = DrawingKind.HorizontalLine, Alert = true, ColorArgb = 0xFFF2B53A, LineStyle = LineStyleKind.Dashed, Points = { new ChartPoint(DateTime.UtcNow, (double)price) } });
                 DrawingsTouched(tab);
             }));
-            if (acc?.ActiveOrders.Any() == true) items.Add(Item("Cancelar todas las órdenes", MaterialIconKind.CloseCircleOutline, () => _ = AccountActionAsync(tab, a => a.CancelAll(), "Órdenes canceladas")));
+            if (acc?.ActiveOrders.Any() == true) items.Add(Item(L.T("Cancelar todas las órdenes"), MaterialIconKind.CloseCircleOutline, () => _ = AccountActionAsync(tab, a => a.CancelAll(), L.T("Órdenes canceladas"))));
             items.Add(new Separator());
         }
 
-        items.Add(Item("Indicadores…", MaterialIconKind.FunctionVariant, () => OpenIndicators(tab)));
-        items.Add(Item("Editar footprint…", MaterialIconKind.ViewColumnOutline, () => OpenFootprintEditor(tab)));
-        items.Add(Item("Configuración del gráfico…", MaterialIconKind.PaletteOutline, () => OpenChartSettings(tab)));
-        var strategyMenu = new MenuItem { Header = "Estrategias en el gráfico", Icon = Ui.Icon(MaterialIconKind.RobotOutline, 16) };
+        items.Add(Item(L.T("Indicadores…"), MaterialIconKind.FunctionVariant, () => OpenIndicators(tab)));
+        items.Add(Item(L.T("Editar footprint…"), MaterialIconKind.ViewColumnOutline, () => OpenFootprintEditor(tab)));
+        items.Add(Item(L.T("Configuración del gráfico…"), MaterialIconKind.PaletteOutline, () => OpenChartSettings(tab)));
+        var strategyMenu = new MenuItem { Header = L.T("Estrategias en el gráfico"), Icon = Ui.Icon(MaterialIconKind.RobotOutline, 16) };
         foreach (var i in StrategyMenuItems(tab)) strategyMenu.Items.Add(i);
         items.Add(strategyMenu);
-        var templates = new MenuItem { Header = "Plantillas de gráfico", Icon = Ui.Icon(MaterialIconKind.BookmarkMultipleOutline, 16) };
+        var templates = new MenuItem { Header = L.T("Plantillas de gráfico"), Icon = Ui.Icon(MaterialIconKind.BookmarkMultipleOutline, 16) };
         foreach (var i in ChartTemplateItems(tab)) templates.Items.Add(i);
         items.Add(templates);
-        var legend = new MenuItem { Header = "Leyenda del gráfico", Icon = Ui.Icon(MaterialIconKind.FormatListBulleted, 16) };
+        var legend = new MenuItem { Header = L.T("Leyenda del gráfico"), Icon = Ui.Icon(MaterialIconKind.FormatListBulleted, 16) };
         void LegendToggle(string text, Func<bool> get, Action<bool> set)
         {
             var mi = new MenuItem { Header = text, Icon = get() ? Ui.Icon(MaterialIconKind.Check, 15, Ui.Accent) : null };
@@ -1077,12 +1077,12 @@ public sealed partial class TradingView
             legend.Items.Add(mi);
         }
 
-        LegendToggle("Nombre del instrumento", () => model.Settings.ShowLegendTitle, v => model.Settings.ShowLegendTitle = v);
-        LegendToggle("Valores de la vela (Ap, Máx, Mín, Cie…)", () => model.Settings.ShowLegendValues, v => model.Settings.ShowLegendValues = v);
-        LegendToggle("Nombres de los indicadores", () => model.Settings.ShowIndicatorNames, v => model.Settings.ShowIndicatorNames = v);
+        LegendToggle(L.T("Nombre del instrumento"), () => model.Settings.ShowLegendTitle, v => model.Settings.ShowLegendTitle = v);
+        LegendToggle(L.T("Valores de la vela (Ap, Máx, Mín, Cie…)"), () => model.Settings.ShowLegendValues, v => model.Settings.ShowLegendValues = v);
+        LegendToggle(L.T("Nombres de los indicadores"), () => model.Settings.ShowIndicatorNames, v => model.Settings.ShowIndicatorNames = v);
         items.Add(legend);
-        var marks = new MenuItem { Header = "Marcar mis operaciones", Icon = model.Settings.ShowTradeMarks ? Ui.Icon(MaterialIconKind.Check, 15, Ui.Accent) : Ui.Icon(MaterialIconKind.SwapVertical, 16) };
-        ToolTip.SetTip(marks, "Triángulos en cada ejecución y una línea de la entrada a la salida de cada operación");
+        var marks = new MenuItem { Header = L.T("Marcar mis operaciones"), Icon = model.Settings.ShowTradeMarks ? Ui.Icon(MaterialIconKind.Check, 15, Ui.Accent) : Ui.Icon(MaterialIconKind.SwapVertical, 16) };
+        ToolTip.SetTip(marks, L.T("Triángulos en cada ejecución y una línea de la entrada a la salida de cada operación"));
         marks.Click += (_, _) =>
         {
             model.Settings.ShowTradeMarks = !model.Settings.ShowTradeMarks;
@@ -1090,17 +1090,17 @@ public sealed partial class TradingView
             Workspace.Save(this);
         };
         items.Add(marks);
-        items.Add(Item("Escala automática", MaterialIconKind.ArrowExpandVertical, () => { model.Viewport.AutoScale = true; model.Invalidate(); }));
-        items.Add(Item("Ir al último precio", MaterialIconKind.PageLast, () => { model.Viewport.ScrollBars = 0; model.Invalidate(); }));
-        if (model.FocusTrade != null) items.Add(Item("Quitar el resaltado de la operación", MaterialIconKind.SelectionRemove, () => ClearFocusTrade(tab)));
-        if (tab.Window == null) items.Add(Item("Sacar a una ventana aparte", MaterialIconKind.OpenInNew, () => Detach(tab)));
+        items.Add(Item(L.T("Escala automática"), MaterialIconKind.ArrowExpandVertical, () => { model.Viewport.AutoScale = true; model.Invalidate(); }));
+        items.Add(Item(L.T("Ir al último precio"), MaterialIconKind.PageLast, () => { model.Viewport.ScrollBars = 0; model.Invalidate(); }));
+        if (model.FocusTrade != null) items.Add(Item(L.T("Quitar el resaltado de la operación"), MaterialIconKind.SelectionRemove, () => ClearFocusTrade(tab)));
+        if (tab.Window == null) items.Add(Item(L.T("Sacar a una ventana aparte"), MaterialIconKind.OpenInNew, () => Detach(tab)));
         if (tab.Window == null && tab.Page is { Charts.Count: > 1 })
         {
             bool big = ReferenceEquals(tab.Page.Maximized, tab);
-            items.Add(Item(big ? "Volver a mostrar todos los gráficos" : "Agrandar este gráfico", big ? MaterialIconKind.ArrowCollapse : MaterialIconKind.ArrowExpand, () => ToggleMaximize(tab)));
-            items.Add(Item("Pasar este gráfico a una pestaña nueva", MaterialIconKind.TabPlus, () => _ = MoveToNewPageAsync(tab)));
+            items.Add(Item(big ? L.T("Volver a mostrar todos los gráficos") : L.T("Agrandar este gráfico"), big ? MaterialIconKind.ArrowCollapse : MaterialIconKind.ArrowExpand, () => ToggleMaximize(tab)));
+            items.Add(Item(L.T("Pasar este gráfico a una pestaña nueva"), MaterialIconKind.TabPlus, () => _ = MoveToNewPageAsync(tab)));
         }
-        else if (tab.Window is { } window) items.Add(Item("Volver a la ventana principal", MaterialIconKind.DockWindow, () => DockBack(window)));
+        else if (tab.Window is { } window) items.Add(Item(L.T("Volver a la ventana principal"), MaterialIconKind.DockWindow, () => DockBack(window)));
         new ContextMenu { ItemsSource = items }.Open(tab.View);
     }
 
@@ -1131,7 +1131,7 @@ public sealed partial class TradingView
     {
         var list = _svc.AccountsFor(data).ToList();
         if (tab.AccountId.StartsWith("rithmic|", StringComparison.Ordinal) && list.All(a => a.Id != tab.AccountId))
-            list.Add(new AccountOption(tab.AccountId, $"{tab.AccountId.Split('|')[^1]} · Rithmic (conectando…)", false));
+            list.Add(new AccountOption(tab.AccountId, L.F("{0} · Rithmic (conectando…)",tab.AccountId.Split('|')[^1]), false));
         return list;
     }
 
@@ -1153,15 +1153,15 @@ public sealed partial class TradingView
             var br = _svc.BracketsFor(acc);
             var sl = br.StopLoss;
             int tps = br.Targets.Count;
-            brackets = (sl != null ? $" · stop {_active.Model.Instrument.FormatPrice(sl.TriggerPrice)}" : " · sin stop") + (tps > 0 ? $" · {tps} objetivo{(tps > 1 ? "s" : "")}" : "");
+            brackets = (sl != null ? L.F(" · stop {0}",_active.Model.Instrument.FormatPrice(sl.TriggerPrice)) : L.T(" · sin stop")) + (tps > 0 ? L.F(" · {0} objetivo{1}",tps,(tps > 1 ? "s" : "")) : "");
         }
 
         ToolTip.SetTip(_positionText, null);
         _positionText.Text = acc.LastError != null
             ? "⚠ " + acc.LastError
             : pos.Volume == 0
-                ? $"Sin posición · {orders} orden(es) activa(s)"
-                : $"{(pos.Volume > 0 ? "LARGO" : "CORTO")} {Math.Abs(pos.Volume)} @ {_active.Model.Instrument.FormatPrice(pos.AveragePrice)} · PnL {pos.UnrealizedPnL:+0.00;-0.00}{brackets}";
+                ? L.F("Sin posición · {0} orden(es) activa(s)",orders)
+                : L.F("{0} {1} @ {2} · PnL {3:+0.00;-0.00}{4}",(pos.Volume > 0 ? L.T("LARGO") : L.T("CORTO")),Math.Abs(pos.Volume),_active.Model.Instrument.FormatPrice(pos.AveragePrice),pos.UnrealizedPnL,brackets);
         _positionText.Foreground = acc.LastError != null ? Brushes.OrangeRed : pos.Volume == 0 ? Ui.Text2 : pos.UnrealizedPnL >= 0 ? Ui.Up : Ui.Down;
     }
 }

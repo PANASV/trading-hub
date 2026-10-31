@@ -94,14 +94,16 @@ public sealed class MarketContextTracker
 
     public static string Label(MarketRegime regime, int? direction) => regime switch
     {
-        MarketRegime.Range => "Rango",
-        MarketRegime.Mixed => "Mixto",
-        MarketRegime.Trend => direction > 0 ? "Tendencia alcista" : direction < 0 ? "Tendencia bajista" : "Tendencia",
-        _ => "Sin datos",
+        MarketRegime.Range => T("Rango"),
+        MarketRegime.Mixed => T("Mixto"),
+        MarketRegime.Trend => direction > 0 ? T("Tendencia alcista") : direction < 0 ? T("Tendencia bajista") : T("Tendencia"),
+        _ => T("Sin datos"),
     };
 
     /// <summary>Volatilidad baja (hasta el percentil 33 del último mes), normal o alta (desde el 67).</summary>
-    public static string VolatilityLabel(double? rank) => rank is not { } r ? "sin datos" : r <= LowVolatility ? "baja" : r >= HighVolatility ? "alta" : "normal";
+    public static string VolatilityLabel(double? rank) => T(rank is not { } r ? "sin datos" : r <= LowVolatility ? "baja" : r >= HighVolatility ? "alta" : "normal");
+
+    private static string T(string s) => TradingHub.Common.Loc.T(s);
 
     /// <summary>
     /// Suma historia previa por hora (para arrancar en vivo con las 24 horas y el mes de volatilidad completos, como en un

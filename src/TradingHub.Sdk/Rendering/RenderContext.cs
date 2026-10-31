@@ -45,12 +45,24 @@ namespace TradingHub.Rendering.Context
         {
             return Typefaces.GetOrAdd((family ?? "Arial", bold, italic), k =>
             {
-                var tf = SKTypeface.FromFamilyName(k.Item1,
-                    k.Item2 ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal,
-                    SKFontStyleWidth.Normal,
-                    k.Item3 ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright);
-                return tf ?? SKTypeface.Default;
+                var weight = k.Item2 ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal;
+                var slant = k.Item3 ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright;
+                var tf = SKTypeface.FromFamilyName(k.Item1, weight, SKFontStyleWidth.Normal, slant) ?? SKTypeface.Default;
+                return WithCjk(tf, weight, slant);
             });
+        }
+
+        /// <summary>
+        /// Con la interfaz en chino, una fuente sin ideogramas (Helvetica, Inter, Menlo…) se cambia por la del sistema que
+        /// los tenga (PingFang en la Mac, Microsoft YaHei en Windows): Skia no busca otra fuente letra por letra.
+        /// </summary>
+        public static SKTypeface WithCjk(SKTypeface tf, SKFontStyleWeight weight, SKFontStyleSlant slant)
+        {
+            if (TradingHub.Common.Loc.Language != TradingHub.Common.Loc.Chinese) return tf;
+            const char probe = '中';
+            if (tf.ContainsGlyph(probe)) return tf;
+            var cjk = SKFontManager.Default.MatchCharacter(tf.FamilyName, (int)weight, (int)SKFontStyleWidth.Normal, slant, new[] { "zh-Hans", "zh-CN" }, probe);
+            return cjk ?? tf;
         }
 
         public static SKFont GetFont(RenderFont font) => GetFont(font.FontFamily, font.PixelSize, font.Bold, font.Italic);

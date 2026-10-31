@@ -1027,7 +1027,7 @@ public sealed class ChartRenderer
         if (hasPosition)
         {
             var label = Line(pos!.AveragePrice, pos.Volume > 0 ? t.PositionLong : t.PositionShort,
-                $"{other}{(pos.Volume > 0 ? "LARGO" : "CORTO")} {Qty(Math.Abs(pos.Volume))} · {Money(pos.UnrealizedPnL)}", false, false);
+                $"{other}{(pos.Volume > 0 ? L.T("LARGO") : L.T("CORTO"))} {Qty(Math.Abs(pos.Volume))} · {Money(pos.UnrealizedPnL)}", false, false);
             if (label is { } lr && br != null) Buttons(lr, null);
             if (br != null) Band(pos.AveragePrice, new BracketDrag(null, BracketRole.None));
         }
@@ -1042,19 +1042,19 @@ public sealed class ChartRenderer
             if (role == BracketRole.StopLoss)
             {
                 color = StopColor;
-                label = $"SL {Qty(o.Unfilled)} · {Money(br!.PnLAt(dragging && state.DragPrice > 0 ? state.DragPrice : price, o.Unfilled))}";
+                label = L.F("SL {0} · {1}",Qty(o.Unfilled),Money(br!.PnLAt(dragging && state.DragPrice > 0 ? state.DragPrice : price, o.Unfilled)));
             }
             else if (role == BracketRole.Target)
             {
                 color = TargetColor;
                 int n = br!.TargetNumber(o);
-                label = $"TP{(n > 0 ? n.ToString(inv) : "")} {Qty(o.Unfilled)} · {Money(br.PnLAt(dragging && state.DragPrice > 0 ? state.DragPrice : price, o.Unfilled))}";
+                label = L.F("TP{0} {1} · {2}",(n > 0 ? n.ToString(inv) : ""),Qty(o.Unfilled),Money(br.PnLAt(dragging && state.DragPrice > 0 ? state.DragPrice : price, o.Unfilled)));
             }
             else
             {
                 color = o.Direction == OrderDirections.Buy ? t.BuyOrder : t.SellOrder;
                 string kind = o.Type == OrderTypes.Stop ? "STP" : "LMT";
-                label = $"{kind} {(o.Direction == OrderDirections.Buy ? "COMPRA" : "VENTA")} {Qty(o.Unfilled)}";
+                label = $"{kind} {(o.Direction == OrderDirections.Buy ? L.T("COMPRA") : L.T("VENTA"))} {Qty(o.Unfilled)}";
             }
 
             label = other + label;
@@ -1071,7 +1071,7 @@ public sealed class ChartRenderer
             if (pb.StopTicks is int st)
             {
                 decimal sp = entry - pb.Side * st * inst.TickSize;
-                Line(sp, StopColor, $"SL al llenar · {st}t · {Money(br.PnLAt(sp, o.Unfilled, entry, pb.Side))}", true, true);
+                Line(sp, StopColor, L.F("SL al llenar · {0}t · {1}",st,Money(br.PnLAt(sp, o.Unfilled, entry, pb.Side))), true, true);
                 Band(sp, new BracketDrag(o, BracketRole.StopLoss, pb, -1));
             }
 
@@ -1080,7 +1080,7 @@ public sealed class ChartRenderer
                 var tg = pb.Targets[i];
                 decimal tp = entry + pb.Side * tg.Ticks * inst.TickSize;
                 string pct = pb.Targets.Count > 1 ? $" {tg.Percent.ToString("0.#", inv)}%" : "";
-                Line(tp, TargetColor, $"TP{i + 1}{pct} al llenar · {tg.Ticks}t", true, true);
+                Line(tp, TargetColor, L.F("TP{0}{1} al llenar · {2}t",i + 1,pct,tg.Ticks), true, true);
                 Band(tp, new BracketDrag(o, BracketRole.Target, pb, i));
             }
         }
@@ -1103,7 +1103,7 @@ public sealed class ChartRenderer
                 int side = d.Entry.Direction == OrderDirections.Buy ? 1 : -1;
                 int ticks = (int)Math.Round((p - entry) / inst.TickSize) * side;
                 bool sl = d.Role == BracketRole.StopLoss || (d.Role == BracketRole.None && ticks < 0);
-                Line(p, sl ? StopColor : TargetColor, $"{(sl ? "SL" : "TP")} al llenar · {Math.Abs(ticks)}t", false, false);
+                Line(p, sl ? StopColor : TargetColor, L.F("{0} al llenar · {1}t",(sl ? "SL" : "TP"),Math.Abs(ticks)), false, false);
             }
         }
 
@@ -1134,8 +1134,8 @@ public sealed class ChartRenderer
         (TimeSpan.FromMinutes(5), "HH:mm"), (TimeSpan.FromMinutes(10), "HH:mm"), (TimeSpan.FromMinutes(15), "HH:mm"),
         (TimeSpan.FromMinutes(30), "HH:mm"), (TimeSpan.FromHours(1), "HH:mm"), (TimeSpan.FromHours(2), "HH:mm"),
         (TimeSpan.FromHours(4), "HH:mm"), (TimeSpan.FromHours(6), "HH:mm"), (TimeSpan.FromHours(12), "HH:mm"),
-        (TimeSpan.FromDays(1), "dd MMM"), (TimeSpan.FromDays(2), "dd MMM"), (TimeSpan.FromDays(7), "dd MMM"),
-        (TimeSpan.FromDays(14), "dd MMM"), (TimeSpan.FromDays(30), "MMM yyyy"), (TimeSpan.FromDays(90), "MMM yyyy"),
+        (TimeSpan.FromDays(1), L.T("dd MMM")), (TimeSpan.FromDays(2), L.T("dd MMM")), (TimeSpan.FromDays(7), L.T("dd MMM")),
+        (TimeSpan.FromDays(14), L.T("dd MMM")), (TimeSpan.FromDays(30), L.T("MMM yyyy")), (TimeSpan.FromDays(90), L.T("MMM yyyy")),
         (TimeSpan.FromDays(365), "yyyy"),
     };
 
@@ -1145,7 +1145,7 @@ public sealed class ChartRenderer
         var series = model.Series;
         if (series.Count == 0 || layout.LastVisible < layout.FirstVisible) return res;
         var tz = model.Settings.TimeZone;
-        var es = CultureInfo.GetCultureInfo("es-AR");
+        var es = TradingHub.Common.Loc.Culture;
 
         // estimación de tiempo por píxel
         int f = layout.FirstVisible, l = layout.LastVisible;
@@ -1297,13 +1297,13 @@ public sealed class ChartRenderer
             int vd = FootprintRenderer.ChooseDecimals(c.Volume, inst.VolumeDecimals);
             var parts = new (string Label, string Value, SKColor Color)[]
             {
-                ("Ap", inst.FormatPrice(series.TicksToPrice(c.OpenTicks)), t.Text),
-                ("Máx", inst.FormatPrice(series.TicksToPrice(c.HighTicks)), t.Text),
-                ("Mín", inst.FormatPrice(series.TicksToPrice(c.LowTicks)), t.Text),
-                ("Cie", inst.FormatPrice(series.TicksToPrice(c.CloseTicks)), c.CloseTicks >= c.OpenTicks ? t.UpCandle : t.DownCandle),
-                ("Vol", VolumeFormat.Compact(c.Volume, vd), t.Text),
+                (L.T("Ap"), inst.FormatPrice(series.TicksToPrice(c.OpenTicks)), t.Text),
+                (L.T("Máx"), inst.FormatPrice(series.TicksToPrice(c.HighTicks)), t.Text),
+                (L.T("Mín"), inst.FormatPrice(series.TicksToPrice(c.LowTicks)), t.Text),
+                (L.T("Cie"), inst.FormatPrice(series.TicksToPrice(c.CloseTicks)), c.CloseTicks >= c.OpenTicks ? t.UpCandle : t.DownCandle),
+                (L.T("Vol"), VolumeFormat.Compact(c.Volume, vd), t.Text),
                 ("Δ", (c.Delta > 0 ? "+" : "") + VolumeFormat.Compact(c.Delta, vd), c.Delta >= 0 ? t.Ask : t.Bid),
-                ("Ops", c.Trades.ToString(CultureInfo.InvariantCulture), t.Text),
+                (L.T("Ops"), c.Trades.ToString(CultureInfo.InvariantCulture), t.Text),
             };
             float total = parts.Sum(pt => RenderContext.MeasureWidth(font, pt.Label) + 4 + RenderContext.MeasureWidth(font, pt.Value) + 12);
             using (var back = new SKPaint { IsAntialias = true, Color = t.BackgroundTop.WithAlpha(215) })
@@ -1334,7 +1334,7 @@ public sealed class ChartRenderer
         {
             _text.Color = t.TextDim.WithAlpha(150);
             int total = overlay.Count + model.Strategies.Count;
-            string n = total == 1 ? "1 indicador" : $"{total} indicadores";
+            string n = total == 1 ? L.T("1 indicador") : $"{total} indicadores";
             canvas.DrawText(n, nx, y, font, _text);
             state.Legend.Add(new LegendHit(new SKRect(nx - 2, y - 11, nx + RenderContext.MeasureWidth(font, n) + 2, y + 4), null, LegendAction.Collapse));
             return;
@@ -1514,7 +1514,7 @@ public sealed class ChartRenderer
         if (bar >= 0 && bar < model.Series.Count)
         {
             var local = TimeZoneInfo.ConvertTimeFromUtc(model.Series[bar].Time, model.Settings.TimeZone);
-            string ts = local.ToString(model.Period.IsTimeBased && model.Period.ApproxDuration >= TimeSpan.FromDays(1) ? "ddd dd MMM yyyy" : "ddd dd MMM  HH:mm:ss", CultureInfo.GetCultureInfo("es-AR"));
+            string ts = local.ToString(model.Period.IsTimeBased && model.Period.ApproxDuration >= TimeSpan.FromDays(1) ? "ddd dd MMM yyyy" : "ddd dd MMM  HH:mm:ss", TradingHub.Common.Loc.Culture);
             float w = RenderContext.MeasureWidth(font, ts) + 12;
             var r = new SKRect(cx - w / 2, layout.TimeAxis.Top + 1, cx + w / 2, layout.TimeAxis.Bottom - 1);
             _fill.Color = t.CrosshairLabelBack;
@@ -1558,7 +1558,7 @@ public sealed class ChartRenderer
         if (x >= layout.Plot.Left && x <= layout.Plot.Right)
         {
             var local = TimeZoneInfo.ConvertTimeFromUtc(time, model.Settings.TimeZone);
-            string ts = local.ToString(model.Period.IsTimeBased && model.Period.ApproxDuration >= TimeSpan.FromDays(1) ? "ddd dd MMM yyyy" : "ddd dd MMM  HH:mm", CultureInfo.GetCultureInfo("es-AR"));
+            string ts = local.ToString(model.Period.IsTimeBased && model.Period.ApproxDuration >= TimeSpan.FromDays(1) ? "ddd dd MMM yyyy" : "ddd dd MMM  HH:mm", TradingHub.Common.Loc.Culture);
             float w = RenderContext.MeasureWidth(font, ts) + 12;
             var r = new SKRect(x - w / 2, layout.TimeAxis.Top + 1, x + w / 2, layout.TimeAxis.Bottom - 1);
             _fill.Color = t.CrosshairLabelBack;
@@ -1580,8 +1580,8 @@ public sealed class ChartRenderer
         string? msg = state.Message;
         if (msg == null)
         {
-            if (model.Data.IsLoadingHistory) msg = $"Cargando historia…  {model.Data.HistoryProgress * 100:0}%";
-            else if (model.Series.Count == 0) msg = model.Data.HistoryError != null ? "Error: " + model.Data.HistoryError : "Esperando datos…";
+            if (model.Data.IsLoadingHistory) msg = L.F("Cargando historia…  {0:0}%",model.Data.HistoryProgress * 100);
+            else if (model.Series.Count == 0) msg = model.Data.HistoryError != null ? L.T("Error: ") + model.Data.HistoryError : L.T("Esperando datos…");
         }
 
         if (msg == null) return;

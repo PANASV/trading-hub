@@ -17,19 +17,19 @@ namespace TradingHub.App.Windows;
 /// </summary>
 internal sealed class StrategyChartWindow : Window
 {
-    private static readonly CultureInfo Es = new("es-AR");
+    private static readonly CultureInfo Es = TradingHub.Common.Loc.Culture;
     private readonly TradingView _host;
     private readonly ChartTab _chart;
     private readonly ChartStrategy _cs;
-    private readonly RadioButton _visual = new() { Content = "Solo visual: marca dónde entra y dónde sale, no opera", GroupName = "modo" };
-    private readonly RadioButton _live = new() { Content = "Ejecutar en vivo con una cuenta", GroupName = "modo" };
+    private readonly RadioButton _visual = new() { Content = L.T("Solo visual: marca dónde entra y dónde sale, no opera"), GroupName = "modo" };
+    private readonly RadioButton _live = new() { Content = L.T("Ejecutar en vivo con una cuenta"), GroupName = "modo" };
     private readonly ComboBox _account = new() { HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly TextBlock _accountNote = new() { Classes = { "faint", "small" }, TextWrapping = TextWrapping.Wrap };
     private readonly StackPanel _params = new() { Spacing = 8 };
     // cómo le fue con la historia del gráfico: el resultado real, la curva y todas las estadísticas
     private readonly TextBlock _net = new() { FontSize = 26, FontWeight = FontWeight.SemiBold };
     private readonly TextBlock _netCaption = new() { Classes = { "faint", "small" }, TextWrapping = TextWrapping.Wrap };
-    private readonly Controls.EquityChart _curve = new() { Height = 130, EmptyText = "Sin operaciones todavía" };
+    private readonly Controls.EquityChart _curve = new() { Height = 130, EmptyText = L.T("Sin operaciones todavía") };
     private readonly Grid _stats = new() { ColumnDefinitions = new ColumnDefinitions("*,Auto,22,*,Auto") };
     private readonly TextBlock _liveText = new() { Classes = { "small" }, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _costsNote = new() { Classes = { "faint", "small" }, TextWrapping = TextWrapping.Wrap };
@@ -46,7 +46,7 @@ internal sealed class StrategyChartWindow : Window
         _host = host;
         _chart = chart;
         _cs = cs;
-        Title = $"Estrategia en el gráfico · {cs.Overlay.Name}";
+        Title = L.F("Estrategia en el gráfico · {0}",cs.Overlay.Name);
         Width = 520;
         Height = 860;
         MinWidth = 420;
@@ -64,24 +64,24 @@ internal sealed class StrategyChartWindow : Window
         BuildParameters();
 
         var body = new StackPanel { Spacing = 18, Margin = new Thickness(20, 18, 20, 18) };
-        body.Children.Add(Ui.V(4, Ui.H2(cs.Overlay.Name), Note($"{chart.Symbol} · {chart.Model?.Period.DisplayName}. Marca sus entradas (flecha) y salidas (cruz con el resultado) en la historia del gráfico y en las nuevas."), _state));
-        body.Children.Add(Section("Cómo corre", _visual, _live, Ui.Field("Cuenta", _account), _accountNote));
-        body.Children.Add(Section("Parámetros", _params));
+        body.Children.Add(Ui.V(4, Ui.H2(cs.Overlay.Name), Note(L.F("{0} · {1}. Marca sus entradas (flecha) y salidas (cruz con el resultado) en la historia del gráfico y en las nuevas.",chart.Symbol,chart.Model?.Period.DisplayName)), _state));
+        body.Children.Add(Section(L.T("Cómo corre"), _visual, _live, Ui.Field(L.T("Cuenta"), _account), _accountNote));
+        body.Children.Add(Section(L.T("Parámetros"), _params));
         var curve = new Border { Child = _curve, Background = Ui.Bg0, CornerRadius = new CornerRadius(10), Padding = new Thickness(6, 8), ClipToBounds = true };
         _results.Children.Add(Ui.V(2, _net, _netCaption));
         _results.Children.Add(curve);
         _results.Children.Add(_stats);
         _results.Children.Add(_liveText);
         _results.Children.Add(_costsNote);
-        body.Children.Add(Section("En la historia del gráfico", _emptyResults, _results));
+        body.Children.Add(Section(L.T("En la historia del gráfico"), _emptyResults, _results));
 
-        var apply = Ui.Button("Aplicar", MaterialIconKind.Check, Apply, "primary");
-        var remove = Ui.Button("Quitar del gráfico", MaterialIconKind.DeleteOutline, () =>
+        var apply = Ui.Button(L.T("Aplicar"), MaterialIconKind.Check, Apply, "primary");
+        var remove = Ui.Button(L.T("Quitar del gráfico"), MaterialIconKind.DeleteOutline, () =>
         {
             host.RemoveStrategy(chart, cs);
             Close();
         }, "danger");
-        var close = Ui.Button("Cerrar", MaterialIconKind.Close, Close);
+        var close = Ui.Button(L.T("Cerrar"), MaterialIconKind.Close, Close);
         var actions = new WrapPanel { ItemSpacing = 8, LineSpacing = 8, Margin = new Thickness(20, 10, 20, 16) };
         foreach (var b in new Control[] { apply, remove, close }) actions.Children.Add(b);
 
@@ -117,8 +117,8 @@ internal sealed class StrategyChartWindow : Window
         bool live = _live.IsChecked == true;
         _account.IsEnabled = live;
         _accountNote.Text = live
-            ? "Manda órdenes de verdad a esa cuenta (si es real, te pide confirmar). La detenés volviendo a «Solo visual» o quitándola; la posición abierta queda como está."
-            : "Corre con una cuenta simulada propia: no toca tu cuenta simulada ni tu historial.";
+            ? L.T("Manda órdenes de verdad a esa cuenta (si es real, te pide confirmar). La detenés volviendo a «Solo visual» o quitándola; la posición abierta queda como está.")
+            : L.T("Corre con una cuenta simulada propia: no toca tu cuenta simulada ni tu historial.");
     }
 
     private void BuildParameters()
@@ -127,7 +127,7 @@ internal sealed class StrategyChartWindow : Window
         _editors.Clear();
         if (_file?.Type == null)
         {
-            _params.Children.Add(Note("La estrategia no está compilada: abrila en Estrategias."));
+            _params.Children.Add(Note(L.T("La estrategia no está compilada: abrila en Estrategias.")));
             return;
         }
 
@@ -187,56 +187,56 @@ internal sealed class StrategyChartWindow : Window
             _editors.Add((p, read));
         }
 
-        if (_editors.Count == 0) _params.Children.Add(Note("Esta estrategia no tiene parámetros."));
+        if (_editors.Count == 0) _params.Children.Add(Note(L.T("Esta estrategia no tiene parámetros.")));
     }
 
     private void Refresh()
     {
-        _state.Text = (_cs.Overlay.Error != null ? "⚠ " + _cs.Overlay.Error + " · " : "") + "Estado: " + _cs.Overlay.Status;
+        _state.Text = (_cs.Overlay.Error != null ? "⚠ " + _cs.Overlay.Error + " · " : "") + L.T("Estado: ") + _cs.Overlay.Status;
         _state.Foreground = _cs.Overlay.Error != null ? Ui.Down : _cs.Overlay.Live ? Ui.Accent : Ui.Text1;
         var m = _cs.HistoryMetrics;
         bool has = m is { TotalTrades: > 0 };
         _emptyResults.IsVisible = !has;
         _results.IsVisible = has;
-        _emptyResults.Text = _cs.Busy ? "Calculando…" : "Sin operaciones en la historia cargada (cargá más días desde el botón de historia del gráfico).";
+        _emptyResults.Text = _cs.Busy ? L.T("Calculando…") : L.T("Sin operaciones en la historia cargada (cargá más días desde el botón de historia del gráfico).");
 
         // lo que corre en vivo (cambia cada segundo); lo de la historia se arma de nuevo solo cuando se recalcula
         var ledger = _cs.Runner?.Ledger;
         int live = ledger?.Trades.Count ?? 0;
         _liveText.IsVisible = live > 0;
-        if (live > 0) _liveText.Text = $"Desde que corre en vivo: {live} operación(es) · resultado {Money(ledger!.Realized)}";
+        if (live > 0) _liveText.Text = L.F("Desde que corre en vivo: {0} operación(es) · resultado {1}",live,Money(ledger!.Realized));
         if (!has || ReferenceEquals(m, _shown)) return;
         _shown = m;
 
         _net.Text = Money(m!.NetProfit);
         _net.Foreground = m.NetProfit >= 0 ? Ui.Up : Ui.Down;
         var from = _cs.HistoryEquity.Count > 0 ? _cs.HistoryEquity[0].Time.ToLocalTime() : (DateTime?)null;
-        _netCaption.Text = $"Resultado real, con comisiones y deslizamiento · {m.TotalTrades} operaciones" + (from is { } f ? $" desde el {f:dd/MM/yyyy}" : "") +
-                           $" · {m.ReturnPercent.ToString("+0.##;-0.##", Es)}% del capital";
+        _netCaption.Text = L.F("Resultado real, con comisiones y deslizamiento · {0} operaciones",m.TotalTrades) + (from is { } f ? L.F(" desde el {0:dd/MM/yyyy}",f) : "") +
+                           L.F(" · {0}% del capital",m.ReturnPercent.ToString("+0.##;-0.##", Es));
         _curve.SetData(_cs.HistoryEquity, _cs.HistoryCapital);
 
         var items = new (string Label, string Value, IBrush? Color)[]
         {
-            ("Operaciones", $"{m.TotalTrades} ({m.Winners} G · {m.Losers} P)", null),
-            ("% ganadoras", $"{m.WinRate:0.#}%", null),
-            ("Profit factor", m.ProfitFactor >= 999 ? "∞" : m.ProfitFactor.ToString("0.00", Es), m.ProfitFactor >= 1 ? Ui.Up : Ui.Down),
-            ("Drawdown máx.", $"{(-m.MaxDrawdown).ToString("#,##0.00", Es)} ({m.MaxDrawdownPercent:0.#}%)", Ui.Down),
-            ("Promedio por op.", Money(m.AverageTrade), m.AverageTrade >= 0 ? Ui.Up : Ui.Down),
-            ("Ganancia / pérdida", m.PayoffRatio.ToString("0.00", Es), null),
-            ("Ganancia media", Money(m.AverageWin), Ui.Up),
-            ("Pérdida media", Money(m.AverageLoss), Ui.Down),
-            ("Mayor ganancia", Money(m.LargestWin), Ui.Up),
-            ("Mayor pérdida", Money(m.LargestLoss), Ui.Down),
-            ("Racha ganadora", $"{m.MaxConsecutiveWins}", null),
-            ("Racha perdedora", $"{m.MaxConsecutiveLosses}", null),
+            (L.T("Operaciones"), L.F("{0} ({1} G · {2} P)",m.TotalTrades,m.Winners,m.Losers), null),
+            (L.T("% ganadoras"), $"{m.WinRate:0.#}%", null),
+            (L.T("Profit factor"), m.ProfitFactor >= 999 ? "∞" : m.ProfitFactor.ToString("0.00", Es), m.ProfitFactor >= 1 ? Ui.Up : Ui.Down),
+            (L.T("Drawdown máx."), $"{(-m.MaxDrawdown).ToString("#,##0.00", Es)} ({m.MaxDrawdownPercent:0.#}%)", Ui.Down),
+            (L.T("Promedio por op."), Money(m.AverageTrade), m.AverageTrade >= 0 ? Ui.Up : Ui.Down),
+            (L.T("Ganancia / pérdida"), m.PayoffRatio.ToString("0.00", Es), null),
+            (L.T("Ganancia media"), Money(m.AverageWin), Ui.Up),
+            (L.T("Pérdida media"), Money(m.AverageLoss), Ui.Down),
+            (L.T("Mayor ganancia"), Money(m.LargestWin), Ui.Up),
+            (L.T("Mayor pérdida"), Money(m.LargestLoss), Ui.Down),
+            (L.T("Racha ganadora"), $"{m.MaxConsecutiveWins}", null),
+            (L.T("Racha perdedora"), $"{m.MaxConsecutiveLosses}", null),
             ("Sharpe", m.SharpeRatio.ToString("0.00", Es), null),
             ("Sortino", m.SortinoRatio.ToString("0.00", Es), null),
-            ("Recuperación", m.RecoveryFactor.ToString("0.00", Es), null),
-            ("Exposición", $"{m.ExposurePercent:0.#}%", null),
-            ("Largos", Money(m.LongNetProfit), m.LongNetProfit >= 0 ? Ui.Up : Ui.Down),
-            ("Cortos", Money(m.ShortNetProfit), m.ShortNetProfit >= 0 ? Ui.Up : Ui.Down),
-            ("Comisiones", (-m.Commission).ToString("#,##0.00", Es), Ui.Text1),
-            ("Velas por op.", m.AverageBarsInTrade.ToString("0.#", Es), null),
+            (L.T("Recuperación"), m.RecoveryFactor.ToString("0.00", Es), null),
+            (L.T("Exposición"), $"{m.ExposurePercent:0.#}%", null),
+            (L.T("Largos"), Money(m.LongNetProfit), m.LongNetProfit >= 0 ? Ui.Up : Ui.Down),
+            (L.T("Cortos"), Money(m.ShortNetProfit), m.ShortNetProfit >= 0 ? Ui.Up : Ui.Down),
+            (L.T("Comisiones"), (-m.Commission).ToString("#,##0.00", Es), Ui.Text1),
+            (L.T("Velas por op."), m.AverageBarsInTrade.ToString("0.#", Es), null),
         };
         _stats.Children.Clear();
         _stats.RowDefinitions.Clear();
@@ -262,9 +262,9 @@ internal sealed class StrategyChartWindow : Window
 
         var costs = _cs.HistoryCosts;
         _costsNote.Text = costs == null ? "" :
-            "Calculado con " + (costs.CommissionPerUnit > 0 ? $"{costs.CommissionPerUnit.ToString("0.##", Es)} de comisión por lado y contrato" :
-                costs.CommissionPercent > 0 ? $"{costs.CommissionPercent.ToString("0.###", Es)}% de comisión por lado" : "sin comisión") +
-            $" y {costs.SlippageTicks} tick(s) de deslizamiento por orden, como el backtest. Para el detalle de cada operación, el backtest en Estrategias.";
+            L.T("Calculado con ") + (costs.CommissionPerUnit > 0 ? L.F("{0} de comisión por lado y contrato",costs.CommissionPerUnit.ToString("0.##", Es)) :
+                costs.CommissionPercent > 0 ? L.F("{0}% de comisión por lado",costs.CommissionPercent.ToString("0.###", Es)) : L.T("sin comisión")) +
+            L.F(" y {0} tick(s) de deslizamiento por orden, como el backtest. Para el detalle de cada operación, el backtest en Estrategias.",costs.SlippageTicks);
     }
 
     private static string Money(decimal v) => v.ToString("+#,##0.00;-#,##0.00", Es);

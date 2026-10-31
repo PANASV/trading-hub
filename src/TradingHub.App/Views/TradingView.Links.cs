@@ -24,14 +24,14 @@ public sealed partial class TradingView
             RefreshLinkButtons();
             if (group == 0)
             {
-                _status("Gráfico desvinculado");
+                _status(L.T("Gráfico desvinculado"));
                 return;
             }
 
             string name = ChartLinks.NameOf(group).ToLowerInvariant();
             if (leader?.Model == null || chart.Model == null)
             {
-                _status($"Grupo {name}: poné el mismo color en otro gráfico para sincronizarlos");
+                _status(L.F("Grupo {0}: poné el mismo color en otro gráfico para sincronizarlos",name));
                 return;
             }
 
@@ -52,11 +52,11 @@ public sealed partial class TradingView
             var synced = Synced().ToList();
             string what = synced.Count switch
             {
-                0 => "nada (activá algo en el menú del color)",
+                0 => L.T("nada (activá algo en el menú del color)"),
                 1 => synced[0],
                 _ => string.Join(", ", synced.Take(synced.Count - 1)) + " y " + synced[^1],
             };
-            _status($"Vinculado al grupo {name}: {what} se sincroniza{(synced.Count > 1 ? "n" : "")} entre sus gráficos");
+            _status(L.F("Vinculado al grupo {0}: {1} se sincroniza{2} entre sus gráficos",name,what,(synced.Count > 1 ? "n" : "")));
         }
         catch (Exception ex)
         {
@@ -67,9 +67,9 @@ public sealed partial class TradingView
     private IEnumerable<string> Synced()
     {
         var s = _svc.Settings;
-        if (s.LinkSymbol) yield return "el instrumento";
-        if (s.LinkPeriod) yield return "el período";
-        if (s.LinkCrosshair) yield return "la cruz del cursor";
+        if (s.LinkSymbol) yield return L.T("el instrumento");
+        if (s.LinkPeriod) yield return L.T("el período");
+        if (s.LinkCrosshair) yield return L.T("la cruz del cursor");
     }
 
     private static bool SameInstrument(ChartTab a, ChartTab b) =>

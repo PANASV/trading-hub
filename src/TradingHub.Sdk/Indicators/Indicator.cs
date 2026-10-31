@@ -114,7 +114,7 @@ namespace TradingHub.Indicators
         public static string DefaultName(Type t)
         {
             var dn = t.GetCustomAttribute<DisplayNameAttribute>()?.DisplayName;
-            return string.IsNullOrWhiteSpace(dn) ? t.Name : dn;
+            return string.IsNullOrWhiteSpace(dn) ? t.Name : TradingHub.Common.Loc.T(dn);
         }
 
         [Browsable(false)]

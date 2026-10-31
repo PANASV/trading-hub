@@ -134,18 +134,18 @@ public sealed class ChartDrawing
 
     public static string KindName(DrawingKind k) => k switch
     {
-        DrawingKind.HorizontalLine => "Línea horizontal",
-        DrawingKind.HorizontalRay => "Rayo horizontal",
-        DrawingKind.VerticalLine => "Línea vertical",
-        DrawingKind.TrendLine => "Línea de tendencia",
-        DrawingKind.Ray => "Rayo",
-        DrawingKind.ExtendedLine => "Línea extendida",
-        DrawingKind.Rectangle => "Rectángulo / zona",
-        DrawingKind.FibRetracement => "Retroceso de Fibonacci",
-        DrawingKind.Text => "Texto",
-        DrawingKind.Ruler => "Regla",
-        DrawingKind.LongPosition => "Posición larga",
-        DrawingKind.ShortPosition => "Posición corta",
+        DrawingKind.HorizontalLine => L.T("Línea horizontal"),
+        DrawingKind.HorizontalRay => L.T("Rayo horizontal"),
+        DrawingKind.VerticalLine => L.T("Línea vertical"),
+        DrawingKind.TrendLine => L.T("Línea de tendencia"),
+        DrawingKind.Ray => L.T("Rayo"),
+        DrawingKind.ExtendedLine => L.T("Línea extendida"),
+        DrawingKind.Rectangle => L.T("Rectángulo / zona"),
+        DrawingKind.FibRetracement => L.T("Retroceso de Fibonacci"),
+        DrawingKind.Text => L.T("Texto"),
+        DrawingKind.Ruler => L.T("Regla"),
+        DrawingKind.LongPosition => L.T("Posición larga"),
+        DrawingKind.ShortPosition => L.T("Posición corta"),
         _ => k.ToString(),
     };
 
@@ -234,8 +234,8 @@ public sealed class ChartDrawing
             double hi = (double)series.TicksToPrice(c.HighTicks), lo = (double)series.TicksToPrice(c.LowTicks);
             bool hitStop = isLong ? lo <= stop : hi >= stop;
             bool hitTarget = isLong ? hi >= target : lo <= target;
-            if (hitStop) return ("Stop tocado", -1); // si toca los dos en la misma vela, se toma el peor caso
-            if (hitTarget) return ("Objetivo tocado", 1);
+            if (hitStop) return (L.T("Stop tocado"), -1); // si toca los dos en la misma vela, se toma el peor caso
+            if (hitTarget) return (L.T("Objetivo tocado"), 1);
         }
 
         return ("", 0);
@@ -401,7 +401,7 @@ public sealed class ChartDrawing
                 break;
             }
             case DrawingKind.Text:
-                canvas.DrawText(string.IsNullOrEmpty(Text) ? "Texto" : Text, x0, y0, labelFont, text);
+                canvas.DrawText(string.IsNullOrEmpty(Text) ? L.T("Texto") : Text, x0, y0, labelFont, text);
                 break;
             case DrawingKind.Ruler:
             {
@@ -419,8 +419,8 @@ public sealed class ChartDrawing
                     long ticks = series.Instrument.TickSize > 0 ? (long)Math.Round(diff / (double)series.Instrument.TickSize) : 0;
                     int bars = Math.Abs(layout.BarAt(x1) - layout.BarAt(x0));
                     var span = Points[1].Time - Points[0].Time;
-                    string l1 = $"{(diff >= 0 ? "+" : "")}{Format(diff, decimals)} ({pct:+0.00;-0.00}%)  {ticks} ticks";
-                    string l2 = $"{bars} barras · {FormatSpan(span)}";
+                    string l1 = L.F("{0}{1} ({2:+0.00;-0.00}%)  {3} ticks",(diff >= 0 ? "+" : ""),Format(diff, decimals),pct,ticks);
+                    string l2 = L.F("{0} barras · {1}",bars,FormatSpan(span));
                     DrawBox(canvas, font, (x0 + x1) / 2, Math.Max(y0, y1) + 6, SKColors.White, l1, l2);
                 }
 
@@ -480,20 +480,20 @@ public sealed class ChartDrawing
         double reward = Math.Abs(target - entry), riskAmt = Math.Abs(entry - stop);
         double rr = riskAmt > 0 ? reward / riskAmt : 0;
         var ic = CultureInfo.InvariantCulture;
-        string Ticks(double d) => tick > 0 ? $" · {Math.Round(d / tick).ToString("0", ic)} ticks" : "";
+        string Ticks(double d) => tick > 0 ? L.F(" · {0} ticks",Math.Round(d / tick).ToString("0", ic)) : "";
         string Pct(double d) => entry != 0 ? $" · {(d / entry * 100).ToString("0.00", ic)}%" : "";
         string Money(double d) => Quantity > 0 ? $" · {((double)Quantity * d).ToString("0.00", ic)}" : "";
         // las etiquetas se centran en la parte visible de la caja
         var plotRect = main.Rect;
         float vx0 = Math.Max(x0, plotRect.Left), vx1 = Math.Min(x1, plotRect.Right);
         float cx = vx1 > vx0 ? (vx0 + vx1) / 2 : (x0 + x1) / 2;
-        string tl = $"Objetivo {Format(target, decimals)}  +{Format(reward, decimals)}{Pct(reward)}{Ticks(reward)}{Money(reward)}";
-        string sl = $"Stop {Format(stop, decimals)}  −{Format(riskAmt, decimals)}{Pct(riskAmt)}{Ticks(riskAmt)}{Money(riskAmt)}";
+        string tl = L.F("Objetivo {0}  +{1}{2}{3}{4}",Format(target, decimals),Format(reward, decimals),Pct(reward),Ticks(reward),Money(reward));
+        string sl = L.F("Stop {0}  −{1}{2}{3}{4}",Format(stop, decimals),Format(riskAmt, decimals),Pct(riskAmt),Ticks(riskAmt),Money(riskAmt));
         float boxH = font.Spacing + 8;
         // la etiqueta del objetivo va del lado de afuera (arriba en la larga, abajo en la corta)
         DrawBox(canvas, font, cx, isLong ? yT - boxH - 4 : yT + 4, theme.UpCandle, tl);
         DrawBox(canvas, font, cx, isLong ? yS + 4 : yS - boxH - 4, theme.DownCandle, sl);
-        string mid = $"{(isLong ? "Larga" : "Corta")} {Format(entry, decimals)} · R:R {rr.ToString("0.00", ic)}" + (Quantity > 0 ? $" · Cant {Quantity.ToString(ic)}" : "") + (status.Length > 0 ? $" · {status}" : "");
+        string mid = L.F("{0} {1} · R:R {2}",(isLong ? L.T("Larga") : L.T("Corta")),Format(entry, decimals),rr.ToString("0.00", ic)) + (Quantity > 0 ? L.F(" · Cant {0}",Quantity.ToString(ic)) : "") + (status.Length > 0 ? $" · {status}" : "");
         var midCol = outcome == 1 ? theme.UpCandle : outcome == -1 ? theme.DownCandle : SKColors.White;
         DrawBox(canvas, font, cx, yE - boxH / 2, midCol, mid);
     }
@@ -663,9 +663,9 @@ public sealed class ChartDrawing
     private static string FormatSpan(TimeSpan s)
     {
         s = s.Duration();
-        if (s.TotalDays >= 1) return $"{(int)s.TotalDays}d {s.Hours}h";
-        if (s.TotalHours >= 1) return $"{(int)s.TotalHours}h {s.Minutes}m";
-        if (s.TotalMinutes >= 1) return $"{(int)s.TotalMinutes}m {s.Seconds}s";
+        if (s.TotalDays >= 1) return L.F("{0}d {1}h",(int)s.TotalDays,s.Hours);
+        if (s.TotalHours >= 1) return L.F("{0}h {1}m",(int)s.TotalHours,s.Minutes);
+        if (s.TotalMinutes >= 1) return L.F("{0}m {1}s",(int)s.TotalMinutes,s.Seconds);
         return $"{s.Seconds}s";
     }
 }

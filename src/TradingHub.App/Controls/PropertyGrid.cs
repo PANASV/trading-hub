@@ -110,8 +110,8 @@ public sealed class PropertyGrid : UserControl
     private static string GroupOf(PropertyInfo p)
     {
         var d = p.GetCustomAttribute<DisplayAttribute>();
-        try { return d?.GetGroupName() ?? p.GetCustomAttribute<CategoryAttribute>()?.Category ?? ""; }
-        catch { return d?.GroupName ?? ""; }
+        try { return L.T(d?.GetGroupName() ?? p.GetCustomAttribute<CategoryAttribute>()?.Category ?? ""); }
+        catch { return L.T(d?.GroupName ?? ""); }
     }
 
     private static int OrderOf(PropertyInfo p)
@@ -126,23 +126,25 @@ public sealed class PropertyGrid : UserControl
         try
         {
             var n = d?.GetName();
-            if (!string.IsNullOrWhiteSpace(n)) return n;
+            if (!string.IsNullOrWhiteSpace(n)) return L.T(n);
         }
         catch
         {
-            if (!string.IsNullOrWhiteSpace(d?.Name)) return d!.Name!;
+            if (!string.IsNullOrWhiteSpace(d?.Name)) return L.T(d!.Name!);
         }
 
         var dn = p.GetCustomAttribute<DisplayNameAttribute>()?.DisplayName;
-        return string.IsNullOrWhiteSpace(dn) ? Humanize(p.Name) : dn;
+        return string.IsNullOrWhiteSpace(dn) ? Humanize(p.Name) : L.T(dn);
     }
 
     private static string? DescriptionOf(PropertyInfo p)
     {
         var d = p.GetCustomAttribute<DisplayAttribute>();
-        try { return d?.GetDescription() ?? p.GetCustomAttribute<DescriptionAttribute>()?.Description; }
-        catch { return d?.Description; }
+        try { return Tr(d?.GetDescription() ?? p.GetCustomAttribute<DescriptionAttribute>()?.Description); }
+        catch { return Tr(d?.Description); }
     }
+
+    private static string? Tr(string? s) => s == null ? null : L.T(s);
 
     private static string Humanize(string s) => System.Text.RegularExpressions.Regex.Replace(s, "(?<=[a-z])([A-Z])", " $1");
 
@@ -152,8 +154,8 @@ public sealed class PropertyGrid : UserControl
         var d = f?.GetCustomAttribute<DisplayAttribute>();
         // también [Description] (los filtros de contexto de las estrategias lo usan)
         string fallback = f?.GetCustomAttribute<System.ComponentModel.DescriptionAttribute>()?.Description ?? value.ToString()!;
-        try { return d?.GetName() ?? fallback; }
-        catch { return d?.Name ?? fallback; }
+        try { return L.T(d?.GetName() ?? fallback); }
+        catch { return L.T(d?.Name ?? fallback); }
     }
 
     // ------------------------------------------------------------------ filas
@@ -333,7 +335,7 @@ public sealed class PropertyGrid : UserControl
 
         if (t == typeof(DateTime) || nt == typeof(DateTime))
         {
-            var tb = new TextBox { Text = value is DateTime dt ? dt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) : "", Watermark = "aaaa-mm-dd hh:mm" };
+            var tb = new TextBox { Text = value is DateTime dt ? dt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) : "", Watermark = L.T("aaaa-mm-dd hh:mm") };
             tb.LostFocus += (_, _) =>
             {
                 if (DateTime.TryParse(tb.Text, CultureInfo.InvariantCulture, DateTimeStyles.None, out var v)) Set(owner, p, v);
@@ -431,7 +433,7 @@ public sealed class PropertyGrid : UserControl
         var flyoutContent = new StackPanel { Spacing = 8, Margin = new Thickness(12), Children = { view } };
         if (allowAuto)
         {
-            var auto = new Button { Content = "Automático (color del tema)" };
+            var auto = new Button { Content = L.T("Automático (color del tema)") };
             auto.Click += (_, _) =>
             {
                 swatch.Background = Brushes.Transparent;
@@ -451,7 +453,7 @@ public sealed class PropertyGrid : UserControl
     {
         var visibleSeries = ind.DataSeries.Where(s => !s.IsHidden).ToList();
         if (visibleSeries.Count == 0 && ind.LineSeries.Count == 0) return;
-        _root.Children.Add(new TextBlock { Text = "Series (colores y estilo)", FontWeight = FontWeight.SemiBold, Foreground = Ui.Text1, Margin = new Thickness(0, 12, 0, 2) });
+        _root.Children.Add(new TextBlock { Text = L.T("Series (colores y estilo)"), FontWeight = FontWeight.SemiBold, Foreground = Ui.Text1, Margin = new Thickness(0, 12, 0, 2) });
         foreach (var s in visibleSeries)
         {
             var inner = new StackPanel { Spacing = 2, Margin = new Thickness(8, 2, 0, 4) };
@@ -464,7 +466,7 @@ public sealed class PropertyGrid : UserControl
         {
             var inner = new StackPanel { Spacing = 2, Margin = new Thickness(8, 2, 0, 4) };
             foreach (var p in EditableProperties(ls.GetType())) AddRow(inner, ls, p, 1);
-            _root.Children.Add(new Expander { Header = "Nivel: " + ls.Name, Content = inner, HorizontalAlignment = HorizontalAlignment.Stretch });
+            _root.Children.Add(new Expander { Header = L.T("Nivel: ") + ls.Name, Content = inner, HorizontalAlignment = HorizontalAlignment.Stretch });
         }
     }
 }

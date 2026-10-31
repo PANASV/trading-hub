@@ -185,6 +185,9 @@ static void SanitizeConnections(string path, string fakeUri, string keychainFile
     File.WriteAllText(keychainFile, System.Text.Json.JsonSerializer.Serialize(secrets));
 }
 
+// idioma de la interfaz para las capturas (es, en, zh); por defecto, español
+TradingHub.Common.Loc.Init(Environment.GetEnvironmentVariable("TRADINGHUB_SNAP_LANG") ?? TradingHub.Common.Loc.Spanish);
+
 AppBuilder.Configure<App>()
     .UseSkia()
     .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
