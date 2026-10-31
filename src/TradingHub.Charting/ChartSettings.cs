@@ -33,7 +33,7 @@ public enum TradeLineStyle
 
 public sealed class ChartSettings
 {
-    public ChartStyle Style { get; set; } = ChartStyle.Footprint;
+    public ChartStyle Style { get; set; } = ChartStyle.Candles;
 
     /// <summary>Cómo se arma cada vela del footprint (columnas elegidas por el usuario).</summary>
     public FootprintLayout Layout { get; set; } = FootprintLayout.Presets[0].Clone();

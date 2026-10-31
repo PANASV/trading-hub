@@ -1337,9 +1337,9 @@ public sealed partial class TradingView : UserControl
             CrashLog.Write(ex);
         }
 
-        var tab = await NewTabAsync(SimulatedFeed.FeedId, "SIM-BTC", ChartPeriod.M5, new ChartSettings { Layout = FootprintLayout.Presets[1].Clone() });
-        tab.Model?.AddIndicator(new TradingHub.Indicators.Native.BigTrades());
-        tab.Model?.AddIndicator(new TradingHub.Indicators.Native.DeltaBars());
+        // gráfico de velas como TradingView con las medias EMA 9 (amarilla), EMA 60 (violeta) y WMA 200 (azul)
+        var tab = await NewTabAsync(SimulatedFeed.FeedId, "SIM-BTC", ChartPeriod.M5, new ChartSettings { Style = ChartStyle.Candles, Layout = FootprintLayout.Presets[1].Clone() });
+        tab.Model?.AddIndicator(new TradingHub.Indicators.Native.QuanTAlibBridge.QtMaRibbon());
         RestorePanelWindows();
     }
 

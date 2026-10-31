@@ -134,7 +134,8 @@ public class QtMovingAverage : QtIndicator
     protected override void Step(int bar, decimal value, bool isNew)
     {
         var r = _ind.Update(new Q.TValue(TimeOf(bar), (double)value), isNew);
-        _ma[bar] = _showWarmup || _ind.IsHot ? ToDec(r.Value) : 0m;
+        // como TradingView: la media se dibuja desde que hay tantas velas como su período
+        _ma[bar] = _showWarmup || _ind.IsHot || bar + 1 >= _period ? ToDec(r.Value) : 0m;
     }
 }
 
@@ -195,15 +196,16 @@ public class QtMaRibbon : QtIndicator
     protected override void Step(int bar, decimal value, bool isNew)
     {
         var tv = new Q.TValue(TimeOf(bar), (double)value);
-        Put(_fast, _f, bar, tv, isNew);
-        Put(_mid, _m, bar, tv, isNew);
-        Put(_slow, _s, bar, tv, isNew);
+        Put(_fast, _f, bar, tv, isNew, _fastPeriod);
+        Put(_mid, _m, bar, tv, isNew, _midPeriod);
+        Put(_slow, _s, bar, tv, isNew, _slowPeriod);
     }
 
-    private void Put(ValueDataSeries s, Q.AbstractBase ind, int bar, Q.TValue tv, bool isNew)
+    private void Put(ValueDataSeries s, Q.AbstractBase ind, int bar, Q.TValue tv, bool isNew, int period)
     {
         var r = ind.Update(tv, isNew);
-        s[bar] = _showWarmup || ind.IsHot ? ToDec(r.Value) : 0m;
+        // como TradingView: cada media se dibuja desde que hay tantas velas como su período
+        s[bar] = _showWarmup || ind.IsHot || bar + 1 >= period ? ToDec(r.Value) : 0m;
     }
 }
 
