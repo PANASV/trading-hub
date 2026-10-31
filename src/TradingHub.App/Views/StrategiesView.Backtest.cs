@@ -282,7 +282,7 @@ internal sealed partial class StrategiesView
 
     /// <summary>De dónde son los datos: el nombre de la conexión o, con Databento, cuál de las tres historias.</summary>
     private string SourceName(SymbolData s) =>
-        s.Combined || s.FeedId == HistorySources.Databento || s.FeedId.EndsWith(HistorySources.OnlySuffix, StringComparison.Ordinal)
+        s.Combined || s.FeedId == HistorySources.Databento || s.FeedId == IbBarImport.FeedId || s.FeedId.EndsWith(HistorySources.OnlySuffix, StringComparison.Ordinal)
             ? HistorySources.Describe(s)
             : _svc.Connections.Find(s.FeedId)?.Name ?? s.FeedId;
 
@@ -385,7 +385,7 @@ internal sealed partial class StrategiesView
         try
         {
             // Databento y «solo Rithmic» no son conexiones con datos en vivo: su ficha sale del catálogo de CME
-            if (feedId != HistorySources.Databento && _svc.Connections.Find(feedId) != null)
+            if (feedId != HistorySources.Databento && feedId != IbBarImport.FeedId && _svc.Connections.Find(feedId) != null)
             {
                 var list = await InstrumentPicker.InstrumentsAsync(_svc, feedId);
                 var inst = list.FirstOrDefault(i => i.Symbol == symbol);

@@ -219,6 +219,8 @@ internal sealed class DataView : UserControl, IPage
         foreach (var (label, _) in Zones) _importZone.Items.Add(new ComboBoxItem { Content = label });
         _importZone.SelectedIndex = 0;
         _importButton = Ui.Button("Importar archivos…", MaterialIconKind.FileImportOutline, () => _ = ImportAsync(), "primary");
+        _ibButton = Ui.Button("Importar carpeta de IB Gateway…", MaterialIconKind.FolderDownloadOutline, () => _ = ImportIbAsync());
+        ToolTip.SetTip(_ibButton, "Velas de futuros de CME bajadas con IB Gateway: una carpeta con un CSV por día (por ejemplo mnq1m_2026-10-30.csv con time,open,high,low,close,volume). Se guardan como futuro de CME (tick, valor del punto, sesión de las 18:00 de Nueva York) en la fuente «IB Gateway». Volver a importar la carpeta actualiza los días nuevos sin duplicar.");
         var duka = Ui.Button("Dukascopy", MaterialIconKind.OpenInNew, () => Shell.Open("https://www.dukascopy.com/swiss/english/marketwatch/historical/"));
         ToolTip.SetTip(duka, "Historia gratis (con cuenta gratis): US100 = USA Tech, US500, US30, DAX, oro, forex… Elegí ticks o velas de 1 minuto y exportá en CSV");
         var histdata = Ui.Button("HistData", MaterialIconKind.OpenInNew, () => Shell.Open("https://www.histdata.com/download-free-forex-data/"));
@@ -230,6 +232,7 @@ internal sealed class DataView : UserControl, IPage
             Ui.Field("Nombre del instrumento", _importSymbol),
             Ui.Field("Hora del archivo", _importZone),
             _importButton,
+            _ibButton,
             _importProgress,
             _importStatus,
             Note(MaterialIconKind.InformationOutline, "Los CFDs no tienen volumen real: cada cotización cuenta como una operación (volumen de ticks) y el lado sale de si el precio subió o bajó. Sirve para precio, velas y backtests de precio; el footprint y el delta son aproximados."));
@@ -460,6 +463,47 @@ internal sealed class DataView : UserControl, IPage
             if (n.Replace("/", "").Replace("_", "").Contains(fx)) return fx;
         var first = n.Split('_', '.', ' ', '-')[0];
         return first.Length > 0 ? first : "IMPORTADO";
+    }
+
+    private Button? _ibButton;
+
+    /// <summary>Importa una carpeta de velas de IB Gateway (un CSV por día) como futuro de CME.</summary>
+    private async Task ImportIbAsync()
+    {
+        if (TopLevel.GetTopLevel(this) is not { } top) return;
+        var folders = await top.StorageProvider.OpenFolderPickerAsync(new Avalonia.Platform.Storage.FolderPickerOpenOptions
+        {
+            Title = "Elegí la carpeta con los CSV de IB Gateway (uno por día)",
+            AllowMultiple = false,
+        });
+        if (folders.Count == 0 || folders[0].TryGetLocalPath() is not { } folder) return;
+        string typed = (_importSymbol.Text ?? "").Trim().ToUpperInvariant();
+        _ibButton!.IsEnabled = false;
+        _importButton!.IsEnabled = false;
+        _importProgress.IsVisible = true;
+        _importStatus.Text = $"{Path.GetFileName(folder)}: leyendo…";
+        try
+        {
+            var progress = new Progress<double>(p => _importProgress.Value = p);
+            var r = await Task.Run(() => IbBarImport.ImportFolder(folder, AppPaths.Ticks, typed.Length > 0 ? typed : null, progress, CancellationToken.None));
+            _importStatus.Text = $"Listo. {r.Symbol}: {r.Bars:N0} velas de {r.Files} archivo(s) en {r.Days} día(s)" +
+                                 (r.From is { } f && r.To is { } t ? $" ({f:dd/MM/yyyy} → {t:dd/MM/yyyy} UTC)" : "") +
+                                 (r.Contracts.Count > 0 ? $" · contratos {string.Join(", ", r.Contracts)}" : "") +
+                                 (r.BadLines > 0 ? $" · {r.BadLines:N0} filas que no se pudieron leer" : "") +
+                                 ". Aparece como «IB Gateway» en la lista de la izquierda y en los backtests.";
+            _status(_importStatus.Text);
+        }
+        catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException)
+        {
+            _importStatus.Text = ex.Message;
+        }
+        finally
+        {
+            _ibButton.IsEnabled = true;
+            _importButton.IsEnabled = true;
+            _importProgress.IsVisible = false;
+            Refresh();
+        }
     }
 
     private async Task ImportAsync()
@@ -702,7 +746,7 @@ internal sealed class DataView : UserControl, IPage
         var day = days.Min(d => d.Day);
         var lastDay = days.Max(d => d.Day);
         Instrument? inst = null;
-        if (_selected.FeedId == HistorySources.Databento) inst = MarketInfo.FuturesInstrument(_selected.FeedId, _selected.Symbol);
+        if (_selected.FeedId is HistorySources.Databento or IbBarImport.FeedId) inst = MarketInfo.FuturesInstrument(_selected.FeedId, _selected.Symbol);
         else
         {
             try

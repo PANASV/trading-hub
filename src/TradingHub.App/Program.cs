@@ -14,6 +14,14 @@ internal static class Program
             return;
         }
 
+        // importar velas de IB Gateway sin abrir la ventana: TradingHub --import-ib <carpeta> [SÍMBOLO]
+        int ib = Array.IndexOf(args, "--import-ib");
+        if (ib >= 0)
+        {
+            Environment.ExitCode = ImportIb(args.Skip(ib + 1).ToArray());
+            return;
+        }
+
         AppDomain.CurrentDomain.UnhandledException += (_, e) => CrashLog.Write(e.ExceptionObject as Exception);
         TaskScheduler.UnobservedTaskException += (_, e) =>
         {
@@ -41,6 +49,33 @@ internal static class Program
         {
             CrashLog.Write(ex);
             throw;
+        }
+    }
+
+    private static int ImportIb(string[] rest)
+    {
+        if (rest.Length == 0)
+        {
+            Console.Error.WriteLine("Uso: TradingHub --import-ib <carpeta con los CSV> [SÍMBOLO, por ejemplo MNQ]");
+            return 2;
+        }
+
+        try
+        {
+            string folder = rest[0].StartsWith("~/", StringComparison.Ordinal)
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), rest[0][2..])
+                : rest[0];
+            var r = TradingHub.Data.IbBarImport.ImportFolder(folder, Services.AppPaths.Ticks, rest.Length > 1 ? rest[1].ToUpperInvariant() : null);
+            Console.WriteLine($"{r.Symbol}: {r.Bars:N0} velas de {r.Files} archivo(s) → {r.Days} día(s) {r.From:yyyy-MM-dd} … {r.To:yyyy-MM-dd} UTC" +
+                              (r.Contracts.Count > 0 ? $" · {string.Join(", ", r.Contracts)}" : "") +
+                              (r.BadLines > 0 ? $" · {r.BadLines} filas ilegibles" : ""));
+            Console.WriteLine($"Guardado en {Path.Combine(Services.AppPaths.Ticks, TradingHub.Data.IbBarImport.FeedId, r.Symbol)}");
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine("Error: " + ex.Message);
+            return 1;
         }
     }
 

@@ -153,6 +153,7 @@ public static class HistorySources
     public static string Describe(SymbolData s)
     {
         if (s.FeedId == Databento) return "Databento";
+        if (s.FeedId == IbBarImport.FeedId) return Pretty(s.FeedId);
         if (s.FeedId.EndsWith(OnlySuffix, StringComparison.Ordinal)) return "solo " + Pretty(Folder(s.FeedId));
         return s.Combined ? $"{Pretty(s.FeedId)} + Databento" : Pretty(s.FeedId);
     }
@@ -161,6 +162,7 @@ public static class HistorySources
     {
         "rithmic" => "Rithmic",
         "tradovate" => "Tradovate",
+        IbBarImport.FeedId => "IB Gateway (velas 1m)",
         _ => feedId,
     };
 }

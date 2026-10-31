@@ -56,7 +56,7 @@ public static class MarketInfo
     /// Futuros de CME (Rithmic o Tradovate: mismos contratos, misma historia continua; también la historia de Databento y
     /// la de solo una conexión, ver <see cref="HistorySources"/>).
     /// </summary>
-    public static bool IsFutures(string feed) => HistorySources.Folder(feed) is RithmicFeed.FeedId or TradingHub.Feeds.Tradovate.TradovateFeed.FeedId or HistorySources.Databento;
+    public static bool IsFutures(string feed) => HistorySources.Folder(feed) is RithmicFeed.FeedId or TradingHub.Feeds.Tradovate.TradovateFeed.FeedId or HistorySources.Databento or IbBarImport.FeedId;
 
     /// <summary>CFDs (archivos importados, OANDA o un broker de cTrader): sin operaciones reales, el spread va como deslizamiento.</summary>
     public static bool IsCfd(string feed) => feed == CsvImport.FeedId || feed == TradingHub.Feeds.Oanda.OandaFeed.FeedId || feed.StartsWith(TradingHub.Feeds.CTrader.CTraderFeed.FeedId, StringComparison.Ordinal);
@@ -83,6 +83,7 @@ public static class MarketInfo
     {
         RithmicFeed.FeedId => "",
         HistorySources.Databento => " (historia de Databento)",
+        IbBarImport.FeedId => " (velas de 1 minuto de IB Gateway convertidas en operaciones: sin lado agresor real, no sirve para flujo de órdenes)",
         _ when feed.EndsWith(HistorySources.OnlySuffix, StringComparison.Ordinal) => $" (solo la historia de {(HistorySources.Folder(feed) == RithmicFeed.FeedId ? "Rithmic" : "Tradovate")})",
         _ => " por Tradovate",
     };
