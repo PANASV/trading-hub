@@ -4,6 +4,9 @@
     <Nullable>annotations</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="QuanTAlib" Version="0.8.12" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\TradingHub.Sdk\TradingHub.Sdk.csproj" />
   </ItemGroup>
 </Project>

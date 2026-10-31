@@ -3,6 +3,9 @@
     <RootNamespace>TradingHub.Strategies</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="QuanTAlib" Version="0.8.12" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\TradingHub.Core\TradingHub.Core.csproj" />
   </ItemGroup>
 </Project>

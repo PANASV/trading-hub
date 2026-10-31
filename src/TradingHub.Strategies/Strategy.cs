@@ -304,6 +304,24 @@ public abstract class Strategy
     /// <summary>Serie propia calculada en cada vela (por ejemplo, la diferencia entre dos medias).</summary>
     protected CustomSeries Custom(string name, Func<BarSeries, decimal> calc) => Add(new CustomSeries(name, calc));
 
+    /// <summary>
+    /// Un indicador de QuanTAlib como serie: <c>Qt(new Q.Jma(20))</c>, <c>Qt(new Q.Kama(10), PriceSource.Typical)</c>.
+    /// En las estrategias <c>Q</c> es el alias de <c>QuanTAlib</c>.
+    /// </summary>
+    protected QtSeries Qt(QuanTAlib.AbstractBase indicator, PriceSource source = PriceSource.Close) => Add(new QtSeries(indicator, source));
+
+    /// <summary>
+    /// Niveles Camarilla de la sesión anterior (fórmula de TradingView, con H5/H6 y L5/L6).
+    /// Sin argumentos usa la sesión del backtest; <c>Camarilla("America/New_York", 18)</c> fija el día de CME.
+    /// </summary>
+    protected CamarillaSeries Camarilla(string? timeZoneId = null, double? sessionStartHour = null)
+    {
+        if (timeZoneId == null && sessionStartHour == null) return Add(new CamarillaSeries(t => Host.Session.SessionDate(t)));
+        var tz = timeZoneId != null && TimeZoneInfo.TryFindSystemTimeZoneById(timeZoneId, out var z) ? z : TimeZoneInfo.Utc;
+        var session = new SessionSettings { TimeZone = tz, Start = TimeSpan.FromHours(sessionStartHour ?? 0) };
+        return Add(new CamarillaSeries(session.SessionDate));
+    }
+
     // ----------------------------------------------------------------- ayudas
 
     protected static bool CrossAbove(Series a, Series b) => a.Count > 1 && b.Count > 1 && a[1] <= b[1] && a[0] > b[0];
