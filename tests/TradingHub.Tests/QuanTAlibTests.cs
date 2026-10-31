@@ -244,3 +244,17 @@ public class QuanTAlibTests
         }
     }
 }
+
+/// <summary>El gráfico por defecto: velas como TradingView (no footprint) con sus colores.</summary>
+public class DefaultChartTests
+{
+    [Fact]
+    public void Por_defecto_son_velas_con_los_colores_de_TradingView()
+    {
+        Assert.Equal(TradingHub.Charting.ChartStyle.Candles, new TradingHub.Charting.ChartSettings().Style);
+        Assert.Equal(new SkiaSharp.SKColor(8, 153, 129), TradingHub.Charting.ChartTheme.Base.UpCandle);
+        Assert.Equal(new SkiaSharp.SKColor(242, 54, 69), TradingHub.Charting.ChartTheme.Base.DownCandle);
+        var ribbon = new TradingHub.Indicators.Native.QuanTAlibBridge.QtMaRibbon();
+        Assert.Equal((QtMaType.Ema, 9, QtMaType.Ema, 60, QtMaType.Wma, 200), (ribbon.FastType, ribbon.FastPeriod, ribbon.MidType, ribbon.MidPeriod, ribbon.SlowType, ribbon.SlowPeriod));
+    }
+}

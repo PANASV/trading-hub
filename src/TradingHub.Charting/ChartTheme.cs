@@ -18,10 +18,11 @@ public sealed class ChartTheme
     public SKColor Text { get; set; } = new(220, 220, 220);
     public SKColor TextDim { get; set; } = new(130, 130, 130);
 
-    public SKColor UpCandle { get; set; } = new(73, 209, 73);
-    public SKColor DownCandle { get; set; } = new(232, 69, 72);
-    public SKColor UpCandleBorder { get; set; } = new(73, 209, 73);
-    public SKColor DownCandleBorder { get; set; } = new(232, 69, 72);
+    // velas con los colores de TradingView (#089981 / #F23645)
+    public SKColor UpCandle { get; set; } = new(8, 153, 129);
+    public SKColor DownCandle { get; set; } = new(242, 54, 69);
+    public SKColor UpCandleBorder { get; set; } = new(8, 153, 129);
+    public SKColor DownCandleBorder { get; set; } = new(242, 54, 69);
     public SKColor Wick { get; set; } = new(150, 150, 150);
 
     public SKColor Bid { get; set; } = new(232, 69, 72);
@@ -47,8 +48,8 @@ public sealed class ChartTheme
     public SKColor Crosshair { get; set; } = new(128, 128, 128, 175);
     public SKColor CrosshairLabelBack { get; set; } = new(50, 50, 50);
     public SKColor CrosshairLabelText { get; set; } = new(255, 255, 255);
-    public SKColor LastPriceUp { get; set; } = new(73, 209, 73);
-    public SKColor LastPriceDown { get; set; } = new(232, 69, 72);
+    public SKColor LastPriceUp { get; set; } = new(8, 153, 129);
+    public SKColor LastPriceDown { get; set; } = new(242, 54, 69);
     public SKColor LastPriceLine { get; set; } = new(255, 255, 255, 63);
     public SKColor NewSession { get; set; } = new(128, 128, 128, 110);
 
@@ -83,10 +84,10 @@ public sealed class ChartTheme
         AxisLine = new(214, 214, 218),
         Text = new(25, 25, 28),
         TextDim = new(110, 110, 116),
-        UpCandle = new(22, 160, 100),
-        DownCandle = new(220, 58, 66),
-        UpCandleBorder = new(22, 160, 100),
-        DownCandleBorder = new(220, 58, 66),
+        UpCandle = new(8, 153, 129),
+        DownCandle = new(242, 54, 69),
+        UpCandleBorder = new(8, 153, 129),
+        DownCandleBorder = new(242, 54, 69),
         Wick = new(95, 95, 100),
         Bid = new(220, 58, 66),
         Ask = new(22, 160, 100),
@@ -108,8 +109,8 @@ public sealed class ChartTheme
         Crosshair = new(90, 90, 96, 175),
         CrosshairLabelBack = new(40, 40, 44),
         CrosshairLabelText = new(255, 255, 255),
-        LastPriceUp = new(22, 160, 100),
-        LastPriceDown = new(220, 58, 66),
+        LastPriceUp = new(8, 153, 129),
+        LastPriceDown = new(242, 54, 69),
         LastPriceLine = new(0, 0, 0, 60),
         NewSession = new(120, 120, 126, 110),
         BuyOrder = new(30, 120, 200),
