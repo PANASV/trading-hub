@@ -1056,6 +1056,26 @@ foreach (var page in pages)
             while (!sel.IsCompleted) Pump(0.05);
         }
 
+        if (parts[1] == "codex")
+        {
+            // el chat con Codex (TRADINGHUB_CODEX_CLI apunta a un codex falso): un pedido completo y el menú del asistente
+            var bf = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+            t.GetMethod("ShowTab", bf)!.Invoke(view, new object[] { "code" });
+            Pump(0.5);
+            t.GetMethod("UseEngine", bf)!.Invoke(view, new object[] { "codex" });
+            Pump(1);
+            var send = (Task)t.GetMethod("SendToClaudeAsync", bf)!.Invoke(view, new object[] { "Explicame qué hace la estrategia abierta" })!;
+            for (int i = 0; i < 200 && !send.IsCompleted; i++) Pump(0.05);
+            Pump(1.5);
+            window.CaptureRenderedFrame()?.Save(Path.Combine(outDir, "strategies_codex.png"));
+            var btn = window.GetVisualDescendants().OfType<Avalonia.Controls.Button>().First(b => Avalonia.Controls.ToolTip.GetTip(b) is string tip && tip.Contains("Codex", StringComparison.Ordinal));
+            t.GetMethod("ShowEngineMenu", bf)!.Invoke(view, new object[] { btn });
+            Pump(1);
+            window.CaptureRenderedFrame()?.Save(Path.Combine(outDir, "strategies_codex_menu.png"));
+            Console.WriteLine("Captura: strategies_codex.png, strategies_codex_menu.png");
+            continue;
+        }
+
         if (parts[1] == "claudefloat")
         {
             // conversación de ejemplo en el historial (carpeta de datos aparte) y chat en una ventana

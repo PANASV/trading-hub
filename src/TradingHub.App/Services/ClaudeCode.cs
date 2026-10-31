@@ -14,8 +14,14 @@ public sealed record ClaudeResult(bool IsError, string Text, double CostUsd, dou
 /// del usuario). Corre en modo no interactivo dentro de la carpeta de estrategias, con permiso solo
 /// para leer y editar archivos de esa carpeta, y transmite la respuesta a medida que llega.
 /// </summary>
-public sealed class ClaudeCodeBridge
+public sealed class ClaudeCodeBridge : IAiBridge
 {
+    public string Engine => AiEngines.Claude;
+
+    /// <summary>Modelo y esfuerzo de este chat (vacío = <see cref="Model"/> y <see cref="Effort"/>).</summary>
+    public string? ModelOverride { get; set; }
+    public string? EffortOverride { get; set; }
+
     private static string? _helpText;
     private static string? _helpCli;
 
@@ -490,16 +496,18 @@ public sealed class ClaudeCodeBridge
             psi.ArgumentList.Add(a);
         // Opus 5.5 con esfuerzo extra (las opciones que esta CLI no conoce se omiten)
         var supports = await SupportsAsync(cli);
-        if (!string.IsNullOrWhiteSpace(Model))
+        var model = string.IsNullOrWhiteSpace(ModelOverride) ? Model : ModelOverride.Trim();
+        var effort = string.IsNullOrWhiteSpace(EffortOverride) ? Effort : EffortOverride.Trim();
+        if (!string.IsNullOrWhiteSpace(model))
         {
             psi.ArgumentList.Add("--model");
-            psi.ArgumentList.Add(Model);
+            psi.ArgumentList.Add(model);
         }
 
-        if (!string.IsNullOrWhiteSpace(Effort) && supports("--effort"))
+        if (!string.IsNullOrWhiteSpace(effort) && supports("--effort"))
         {
             psi.ArgumentList.Add("--effort");
-            psi.ArgumentList.Add(Effort);
+            psi.ArgumentList.Add(effort);
         }
 
         // otras carpetas donde puede escribir (por ejemplo la de indicadores)
