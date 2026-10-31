@@ -88,6 +88,13 @@ public class LocalizationTests : IDisposable
     }
 
     [Theory]
+    [InlineData("(\n    \"zh-Hans-CN\",\n    \"en-CN\"\n)", "zh")]
+    [InlineData("(\n    \"es-AR\"\n)", "es")]
+    [InlineData("(\n    en,\n    ja\n)", "en")]
+    [InlineData("", null)]
+    public void Lee_el_idioma_de_la_Mac(string output, string? expected) => Assert.Equal(expected, Loc.FirstAppleLanguage(output));
+
+    [Theory]
     [InlineData("es", "es")]
     [InlineData("en", "en")]
     [InlineData("zh", "zh")]
