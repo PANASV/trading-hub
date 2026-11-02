@@ -39,11 +39,11 @@ public static class IbProbe
             var body = new byte[n];
             await stream.ReadExactlyAsync(body, rt.Token).ConfigureAwait(false);
             var fields = Encoding.ASCII.GetString(body).Split('\0');
-            return (true, $"TWS respondió: versión del servidor {fields.ElementAtOrDefault(0)}, hora {fields.ElementAtOrDefault(1)}");
+            return (true, TradingHub.Common.Loc.F("Conectado a TWS / IB Gateway: versión del servidor {0}, hora {1}", fields.ElementAtOrDefault(0), fields.ElementAtOrDefault(1)));
         }
         catch (Exception ex)
         {
-            return (false, $"No se pudo conectar a {host}:{port} ({ex.Message}). ¿Está abierta la TWS o el IB Gateway con la API habilitada?");
+            return (false, TradingHub.Common.Loc.F("No se pudo conectar a {0}:{1} ({2}). ¿Está abierta la TWS o el IB Gateway con la API habilitada?", host, port, ex.Message));
         }
     }
 }

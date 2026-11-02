@@ -854,7 +854,7 @@ internal sealed class ConnectionsView : UserControl, IPage
         });
         return Ui.V(14,
             Ui.H2(L.T("Interactive Brokers (TWS / IB Gateway)")),
-            Note(MaterialIconKind.InformationOutline, L.T("Abrí TWS o IB Gateway y habilitá la API (Configure → API → Settings). Puertos habituales: 7497 TWS paper, 7496 TWS real, 4002 Gateway paper. Por ahora Trading Hub solo verifica la conexión.")),
+            Note(MaterialIconKind.InformationOutline, L.T("Abrí TWS o IB Gateway y habilitá la API (Configure → API → Settings). Puertos habituales: 7497 TWS paper, 7496 TWS real, 4002 Gateway paper, 4001 Gateway real. Los gráficos muestran las velas importadas de IB Gateway (Datos → Importar carpeta de IB Gateway); con TWS / IB Gateway abierto solo se verifica la conexión, todavía no llegan datos en vivo ni se envían órdenes.")),
             TwoColumns(Ui.Field(L.T("Host"), host), Ui.Field(L.T("Puerto"), port)),
             Ui.Field(L.T("Client ID"), client));
     }
