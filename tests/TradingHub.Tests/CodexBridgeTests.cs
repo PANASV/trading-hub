@@ -162,4 +162,24 @@ public class CodexBridgeTests
             dir.Delete(true);
         }
     }
+    [Fact]
+    public void TradingView_se_suma_como_servidor_MCP_en_los_dos_asistentes()
+    {
+        var args = BuildArgs("/x", null, null, lab: false, Array.Empty<string>(), null, "th", _ => true, tradingView: true);
+        Assert.Contains("mcp_servers.tradingview.url=\"https://mcp.tradingview.com/mcp\"", args);
+        Assert.DoesNotContain(args, a => a.StartsWith("mcp_servers.tradinghub", StringComparison.Ordinal));
+        Assert.DoesNotContain(BuildArgs("/x", null, null, lab: false, Array.Empty<string>(), null, "th", _ => true), a => a.Contains("tradingview", StringComparison.Ordinal));
+
+        // Claude Code: la misma entrada que deja «claude mcp add --transport http tradingview …»
+        {
+            var path = ClaudeCodeBridge.WriteMcpConfig(lab: true, tradingView: true);
+            using var doc = JsonDocument.Parse(File.ReadAllText(path));
+            var servers = doc.RootElement.GetProperty("mcpServers");
+            Assert.Equal("http", servers.GetProperty("tradingview").GetProperty("type").GetString());
+            Assert.Equal("https://mcp.tradingview.com/mcp", servers.GetProperty("tradingview").GetProperty("url").GetString());
+            Assert.Equal("stdio", servers.GetProperty("tradinghub").GetProperty("type").GetString());
+            using var only = JsonDocument.Parse(File.ReadAllText(ClaudeCodeBridge.WriteMcpConfig(lab: false, tradingView: true)));
+            Assert.False(only.RootElement.GetProperty("mcpServers").TryGetProperty("tradinghub", out _));
+        }
+    }
 }

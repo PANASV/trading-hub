@@ -21,6 +21,7 @@ public sealed class CodexBridge : IAiBridge
     public bool IsRunning => _proc is { HasExited: false };
     public string? ModelOverride { get; set; }
     public string? EffortOverride { get; set; }
+    public bool UseTradingView { get; set; }
 
     public event Action<string>? Text;
     public event Action<string, string?>? ToolUsed;
@@ -144,7 +145,7 @@ public sealed class CodexBridge : IAiBridge
     internal static string Toml(string s) => "\"" + s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n") + "\"";
 
     /// <summary>Los argumentos de codex exec (el pedido va por la entrada estándar: «-»).</summary>
-    internal static List<string> BuildArgs(string workDir, string? model, string? effort, bool lab, IEnumerable<string> extraDirs, string? sessionId, string mcpCommand, Func<string, bool> supports)
+    internal static List<string> BuildArgs(string workDir, string? model, string? effort, bool lab, IEnumerable<string> extraDirs, string? sessionId, string mcpCommand, Func<string, bool> supports, bool tradingView = false)
     {
         var args = new List<string>
         {
@@ -191,6 +192,13 @@ public sealed class CodexBridge : IAiBridge
                 args.Add("-c");
                 args.Add("mcp_servers.tradinghub.env={DOTNET_ROOT=" + Toml(root) + "}");
             }
+        }
+
+        if (tradingView)
+        {
+            // el servidor oficial de TradingView (la sesión se inicia una vez con «codex mcp login tradingview»)
+            args.Add("-c");
+            args.Add("mcp_servers.tradingview.url=" + Toml(ClaudeCodeBridge.TradingViewMcpUrl));
         }
 
         if (sessionId != null)
@@ -260,7 +268,7 @@ public sealed class CodexBridge : IAiBridge
         var mcp = Environment.GetEnvironmentVariable("TRADINGHUB_MCP_COMMAND") is { Length: > 0 } custom ? custom : Environment.ProcessPath ?? "TradingHub";
         var dirs = (extraDirs ?? Array.Empty<string>()).Where(Directory.Exists);
         var psi = Prepare(cli, workDir);
-        foreach (var a in BuildArgs(workDir, ModelOverride, EffortOverride, lab, dirs, SessionId, mcp, supports)) psi.ArgumentList.Add(a);
+        foreach (var a in BuildArgs(workDir, ModelOverride, EffortOverride, lab, dirs, SessionId, mcp, supports, UseTradingView)) psi.ArgumentList.Add(a);
         psi.StandardInputEncoding = new UTF8Encoding(false);
 
         // las instrucciones van al principio de la conversación (al seguirla, Codex ya las tiene)

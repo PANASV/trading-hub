@@ -34,3 +34,20 @@ Trading Hub 运行 `codex exec --json`：
 - 继续对话时使用 `codex exec resume <会话 id>`。
 
 实盘风控代理（「实盘 → 组合」）目前仍然只使用 Claude Code。
+
+## TradingView（官方 MCP）
+
+在助手菜单里勾选 **使用 TradingView（官方 MCP）** 后，Claude 和 Codex 可以使用你的 TradingView 账户（需要 Essential 及以上套餐）查询：
+
+- K 线（1 分钟到月线，每次最多 5,000 根）
+- 报价、筛选器、技术指标
+- 新闻、经济日历、基本面数据
+
+研究和对照用 TradingView 的数据，回测仍然用 Trading Hub 的数据。TradingView 每个用户每分钟大约 100 次调用。
+
+**第一次使用要先连接。** 在菜单里点「连接 TradingView」，会打开终端：
+
+- Codex：自动运行 `codex mcp add tradingview --url https://mcp.tradingview.com/mcp` 和 `codex mcp login tradingview`，在浏览器里用 TradingView 账户授权。
+- Claude Code：自动运行 `claude mcp add --transport http --scope user tradingview https://mcp.tradingview.com/mcp`，然后打开 `claude`。在里面输入 `/mcp`，选 `tradingview` → Authenticate，授权后输入 `/exit` 退出。
+
+助手被要求不能擅自新建、修改或删除 TradingView 的警报和自选列表。

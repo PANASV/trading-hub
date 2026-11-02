@@ -153,6 +153,7 @@ internal sealed partial class StrategiesView
         bool codex = _claude.Engine == AiEngines.Codex;
         _claude.ModelOverride = codex ? s.CodexModel : s.ClaudeModel;
         _claude.EffortOverride = codex ? s.CodexEffort : s.ClaudeEffort;
+        _claude.UseTradingView = s.AiTradingView;
     }
 
     /// <summary>Menú del asistente: Claude Code o Codex, modelo (se puede escribir otro) y razonamiento.</summary>
@@ -252,11 +253,32 @@ internal sealed partial class StrategiesView
 
         var login = Ui.Button(L.T("Iniciar sesión"), MaterialIconKind.Login, () => AiEngines.OpenLogin(_claude.Engine));
         login.Padding = new Thickness(10, 4);
+
+        // TradingView: el servidor MCP oficial (velas, cotizaciones, screener, noticias, calendario)
+        var tv = new CheckBox { Content = L.T("Usar TradingView (MCP oficial)"), IsChecked = s.AiTradingView };
+        tv.IsCheckedChanged += (_, _) =>
+        {
+            s.AiTradingView = tv.IsChecked == true;
+            s.Save();
+            ApplyModel();
+            UpdateClaudeHint();
+        };
+        var tvLogin = Ui.Button(L.T("Conectar TradingView"), MaterialIconKind.ChartLine, () => AiEngines.OpenTradingViewLogin(_claude.Engine));
+        tvLogin.Padding = new Thickness(10, 4);
+        var tvNote = new TextBlock
+        {
+            Text = L.T("Velas, cotizaciones, screener, noticias y calendario económico de tu cuenta de TradingView (plan Essential o superior). Se conecta una vez por asistente: en la Terminal autorizás con tu cuenta de TradingView."),
+            Classes = { "faint", "small" },
+            TextWrapping = TextWrapping.Wrap,
+            MaxWidth = 300,
+        };
         var content = Ui.V(8,
             new TextBlock { Text = L.T("Asistente"), Classes = { "small" }, FontWeight = FontWeight.SemiBold }, engines,
             new TextBlock { Text = L.T("Modelo"), Classes = { "small" }, FontWeight = FontWeight.SemiBold }, models, custom,
             new TextBlock { Text = L.T("Razonamiento"), Classes = { "small" }, FontWeight = FontWeight.SemiBold }, efforts,
-            note, login);
+            note, login,
+            new Border { Height = 1, Background = Ui.Line, Margin = new Thickness(0, 4) },
+            tv, tvNote, tvLogin);
         content.Width = 300;
         content.Margin = new Thickness(4);
         new Flyout { Content = content, Placement = PlacementMode.BottomEdgeAlignedRight }.ShowAt(anchor);
@@ -266,11 +288,11 @@ internal sealed partial class StrategiesView
     {
         bool lab = _labToggle.IsChecked == true;
         bool codex = _claude.Engine == AiEngines.Codex;
-        _claudeHint.Text = lab
+        _claudeHint.Text = (_claude.UseTradingView ? "TradingView · " : "") + (lab
             ? L.F("Laboratorio: {0} corre las pruebas por su cuenta (pueden tardar varios minutos) y guarda un reporte en Reportes.", EngineName)
             : codex
                 ? L.T("Usa tu Codex (cuenta de ChatGPT). Trabaja solo en la carpeta de estrategias, sin red.")
-                : L.T("Usa tu Claude Code (suscripción). Solo puede leer y editar archivos de la carpeta de estrategias.");
+                : L.T("Usa tu Claude Code (suscripción). Solo puede leer y editar archivos de la carpeta de estrategias."));
         _claudeHint.Foreground = lab ? Ui.Accent : null;
         _prompt.Watermark = lab ? L.T("Ej.: investigá y optimizá la estrategia abierta con 60 días de BTCUSDT y decime si es ganadora") : L.T("Pedile una estrategia o un cambio…");
     }
@@ -396,7 +418,8 @@ internal sealed partial class StrategiesView
         _reportsBefore = Lab.ReportStore.List().Select(r => r.Path).ToHashSet();
         _workingText = L.F("{0} está trabajando…", EngineName);
         AddNote(MaterialIconKind.ProgressClock, _workingText);
-        await _claude.SendAsync(prompt, AppPaths.Strategies, ClaudeCodeBridge.StrategySystemPrompt + ClaudeCodeBridge.IndicatorSystemPrompt + (lab ? ClaudeCodeBridge.LabSystemPrompt : ""), lab,
+        await _claude.SendAsync(prompt, AppPaths.Strategies, ClaudeCodeBridge.StrategySystemPrompt + ClaudeCodeBridge.IndicatorSystemPrompt + (lab ? ClaudeCodeBridge.LabSystemPrompt : "")
+            + (_claude.UseTradingView ? ClaudeCodeBridge.TradingViewSystemPrompt : ""), lab,
             new[] { AppPaths.UserIndicators, Directory.CreateDirectory(Lab.LabServer.CapturesDir).FullName });
     }
 
@@ -492,6 +515,23 @@ internal sealed partial class StrategiesView
                 var other => (MaterialIconKind.FlaskOutline, other),
             };
             AddNote(labIcon, string.IsNullOrEmpty(file) ? labVerb : $"{labVerb} · {file}", Ui.Accent);
+            return;
+        }
+
+        if (tool.StartsWith("mcp__tradingview__", StringComparison.Ordinal))
+        {
+            var tvTool = tool["mcp__tradingview__".Length..];
+            var tvVerb = tvTool switch
+            {
+                "get_ohlcv" => L.T("Velas de TradingView"),
+                "get_symbol_data" or "get_symbol_data_batch" => L.T("Cotización en TradingView"),
+                "search_symbols" or "symbol_search" => L.T("Buscando el símbolo en TradingView"),
+                _ when tvTool.Contains("news", StringComparison.OrdinalIgnoreCase) => L.T("Noticias de TradingView"),
+                _ when tvTool.Contains("calendar", StringComparison.OrdinalIgnoreCase) => L.T("Calendario de TradingView"),
+                _ when tvTool.Contains("screen", StringComparison.OrdinalIgnoreCase) => L.T("Screener de TradingView"),
+                _ => "TradingView · " + tvTool,
+            };
+            AddNote(MaterialIconKind.ChartLine, string.IsNullOrEmpty(file) ? tvVerb : $"{tvVerb} · {file}", Ui.Accent);
             return;
         }
 

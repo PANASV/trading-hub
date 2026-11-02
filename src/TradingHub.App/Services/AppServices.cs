@@ -217,6 +217,9 @@ public sealed class AppSettings
     public string CodexModel { get; set; } = "";
     public string CodexEffort { get; set; } = "";
 
+    /// <summary>El chat de estrategias usa también el servidor MCP oficial de TradingView.</summary>
+    public bool AiTradingView { get; set; }
+
     /// <summary>Gráficos vinculados por color: qué se sincroniza dentro de cada grupo.</summary>
     public bool LinkSymbol { get; set; } = true;
     public bool LinkPeriod { get; set; } = true;

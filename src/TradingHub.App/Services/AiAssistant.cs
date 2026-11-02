@@ -20,6 +20,9 @@ public interface IAiBridge
     string? ModelOverride { get; set; }
     string? EffortOverride { get; set; }
 
+    /// <summary>Suma el servidor MCP oficial de TradingView (velas, cotizaciones, screener, noticias, calendario).</summary>
+    bool UseTradingView { get; set; }
+
     event Action<string>? Text;
 
     /// <summary>Usó una herramienta: nombre al estilo de Claude Code (Write, Edit, Read, Bash, mcp__tradinghub__…) y detalle.</summary>
@@ -92,20 +95,43 @@ public static class AiEngines
         else ClaudeCodeBridge.OpenLoginTerminal();
     }
 
+    /// <summary>
+    /// Conecta TradingView (OAuth con la cuenta de TradingView) en la CLI del asistente: Codex lo hace con
+    /// «codex mcp login»; Claude Code, con /mcp dentro de claude (se abre y se explica qué tocar).
+    /// </summary>
+    public static void OpenTradingViewLogin(string engine)
+    {
+        string url = ClaudeCodeBridge.TradingViewMcpUrl;
+        if (Normalize(engine) == Codex)
+        {
+            var cli = CodexBridge.FindCli() ?? "codex";
+            RunCommandInTerminal($"'{cli}' mcp add tradingview --url {url}; '{cli}' mcp login tradingview");
+        }
+        else
+        {
+            var cli = ClaudeCodeBridge.FindCli() ?? "claude";
+            RunCommandInTerminal($"'{cli}' mcp add --transport http --scope user tradingview {url}; echo; echo '{L.T("Escribí /mcp, elegí tradingview y Authenticate. Después salí con /exit.")}'; echo; '{cli}'");
+        }
+    }
+
     /// <summary>Corre un comando en la Terminal de la Mac (o en una consola nueva en Windows).</summary>
-    internal static void RunInTerminal(string cli, string args)
+    internal static void RunInTerminal(string cli, string args) =>
+        RunCommandInTerminal(OperatingSystem.IsWindows() ? $"\"{cli}\" {args}" : $"'{cli}' {args}");
+
+    /// <summary>Una línea de comandos en la Terminal (sin comillas dobles: va dentro del AppleScript).</summary>
+    internal static void RunCommandInTerminal(string command)
     {
         try
         {
             if (OperatingSystem.IsWindows())
             {
-                Process.Start(new ProcessStartInfo("cmd.exe", $"/s /k \"\"{cli}\" {args}\"") { UseShellExecute = true })?.Dispose();
+                Process.Start(new ProcessStartInfo("cmd.exe", $"/s /k \"{command.Replace("; ", " & ")}\"") { UseShellExecute = true })?.Dispose();
                 return;
             }
 
             var psi = new ProcessStartInfo("/usr/bin/osascript") { UseShellExecute = false };
             psi.ArgumentList.Add("-e");
-            psi.ArgumentList.Add($"tell application \"Terminal\" to do script \"'{cli}' {args}\"");
+            psi.ArgumentList.Add($"tell application \"Terminal\" to do script \"{command}\"");
             psi.ArgumentList.Add("-e");
             psi.ArgumentList.Add("tell application \"Terminal\" to activate");
             Process.Start(psi)?.Dispose();
