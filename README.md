@@ -183,6 +183,7 @@ Esos indicadores son de sus autores: usalos respetando la licencia de cada fuent
 | [Backtesting](docs/backtesting.md) | Backtest, optimización, walk-forward, PBO, CPCV y Monte Carlo |
 | [En vivo](docs/en-vivo.md) | Estrategias en tus cuentas, portafolios y agente de riesgo |
 | [Claude](docs/asistente-claude.md) | El asistente de estrategias y el laboratorio MCP |
+| [Interactive Brokers](docs/ib.md) | Historia y datos en vivo de futuros de índices por TWS / IB Gateway |
 | [Codex](docs/codex.md) | Usar Codex CLI (ChatGPT) en vez de Claude, y elegir el modelo |
 | [Indicadores](docs/indicadores.md) | Incluidos, propios y compatibles con la API de ATAS |
 | [Ajustes](docs/ajustes.md) | Todas las opciones |

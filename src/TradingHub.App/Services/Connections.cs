@@ -186,7 +186,7 @@ public sealed class ConnectionProfile
         _ => "ib",
     };
 
-    /// <summary>Da datos de mercado para gráficos (Databento, no; IB, la historia importada de IB Gateway, sin tiempo real).</summary>
+    /// <summary>Da datos de mercado para gráficos (Databento, no; IB, por TWS / IB Gateway).</summary>
     [JsonIgnore] public bool HasMarketData => Kind is not ConnectionKind.Databento;
 
     /// <summary>Id por defecto del primer perfil de cada tipo (el mismo de sus datos).</summary>
@@ -348,8 +348,8 @@ public sealed class ConnectionManager
             ConnectionKind.Oanda => new TradingHub.Feeds.Oanda.OandaFeed(OandaSettingsOf(p)),
             ConnectionKind.Alpaca => new TradingHub.Feeds.Alpaca.AlpacaFeed(AlpacaSettingsOf(p)),
             ConnectionKind.Databento => throw new NotSupportedException(L.T("Databento no da datos en vivo: se usa desde Datos para bajar historia de futuros.")),
-            // las velas de 1 minuto importadas de IB Gateway (sin tiempo real)
-            _ => new StoredHistoryFeed(AppPaths.Ticks, IbBarImport.FeedId, "IB Gateway", IbBarImport.InstrumentFor),
+            // TWS / IB Gateway: historia (lo importado + velas de IB) y en vivo
+            _ => new IbFeed(() => new IbSettings(p.IbHost, p.IbPort, p.IbClientId), AppPaths.Ticks),
         };
         _feeds[p.Id] = f;
         return f;

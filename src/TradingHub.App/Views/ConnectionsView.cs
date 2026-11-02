@@ -854,7 +854,7 @@ internal sealed class ConnectionsView : UserControl, IPage
         });
         return Ui.V(14,
             Ui.H2(L.T("Interactive Brokers (TWS / IB Gateway)")),
-            Note(MaterialIconKind.InformationOutline, L.T("Abrí TWS o IB Gateway y habilitá la API (Configure → API → Settings). Puertos habituales: 7497 TWS paper, 7496 TWS real, 4002 Gateway paper, 4001 Gateway real. Los gráficos muestran las velas importadas de IB Gateway (Datos → Importar carpeta de IB Gateway); con TWS / IB Gateway abierto solo se verifica la conexión, todavía no llegan datos en vivo ni se envían órdenes.")),
+            Note(MaterialIconKind.InformationOutline, L.T("Abrí TWS o IB Gateway y habilitá la API (Configure → API → Settings). Puertos habituales: 7497 TWS paper, 7496 TWS real, 4002 Gateway paper, 4001 Gateway real. Los gráficos de futuros de índices (MNQ, MES, M2K, NQ, ES…) muestran lo importado, completan lo que falta con velas de 1 minuto de IB y siguen en vivo tick a tick (hace falta la suscripción de datos de CME en tiempo real). El client id tiene que ser distinto del de otros programas conectados a la misma TWS / IB Gateway. Todavía no se envían órdenes a IB.")),
             TwoColumns(Ui.Field(L.T("Host"), host), Ui.Field(L.T("Puerto"), port)),
             Ui.Field(L.T("Client ID"), client));
     }
