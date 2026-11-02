@@ -37,8 +37,8 @@ public static class FuturesRolls
     /// <summary>Símbolo de Rithmic/CME: raíz + mes + último dígito del año (ES, sep 2026 → ESU6).</summary>
     public static string Symbol(string root, int year, int month) => $"{root.ToUpperInvariant()}{Codes[month - 1]}{year % 10}";
 
-    /// <summary>Contrato vigente en un instante, y desde/hasta cuándo lo es.</summary>
-    public static (string Symbol, DateTime From, DateTime To) On(string root, DateTime utc)
+    /// <summary>Año y mes del contrato vigente en un instante (marzo, junio, septiembre o diciembre).</summary>
+    public static (int Year, int Month) ContractMonth(DateTime utc)
     {
         int y = utc.Year, m = ((utc.Month - 1) / 3 + 1) * 3; // trimestral de este trimestre: 3, 6, 9 o 12
         if (utc >= Roll(y, m))
@@ -50,6 +50,14 @@ public static class FuturesRolls
                 y++;
             }
         }
+
+        return (y, m);
+    }
+
+    /// <summary>Contrato vigente en un instante, y desde/hasta cuándo lo es.</summary>
+    public static (string Symbol, DateTime From, DateTime To) On(string root, DateTime utc)
+    {
+        var (y, m) = ContractMonth(utc);
 
         int py = y, pm = m - 3;
         if (pm < 1)
