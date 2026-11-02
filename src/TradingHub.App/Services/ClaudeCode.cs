@@ -22,6 +22,9 @@ public sealed class ClaudeCodeBridge : IAiBridge
     public string? ModelOverride { get; set; }
     public string? EffortOverride { get; set; }
 
+    /// <summary>Suma el servidor MCP oficial de TradingView (hay que conectarlo una vez con la cuenta de TradingView).</summary>
+    public bool UseTradingView { get; set; }
+
     private static string? _helpText;
     private static string? _helpCli;
 
@@ -450,22 +453,28 @@ public sealed class ClaudeCodeBridge : IAiBridge
         "analyze_portfolio", "suggest_portfolio", "live_portfolio", "propose_sizing", "save_report", "list_indicators", "compile_indicator", "chart_snapshot",
     };
 
+    /// <summary>Servidor MCP oficial de TradingView (HTTP con OAuth de la cuenta de TradingView).</summary>
+    public const string TradingViewMcpUrl = "https://mcp.tradingview.com/mcp";
+
     /// <summary>Config MCP que levanta Trading Hub en modo laboratorio (el mismo ejecutable con --mcp).</summary>
-    internal static string WriteLabConfig()
+    internal static string WriteLabConfig() => WriteMcpConfig(lab: true, tradingView: false);
+
+    /// <summary>
+    /// Config MCP del chat: el laboratorio de Trading Hub y/o TradingView. La entrada de TradingView es igual a la que
+    /// deja «claude mcp add --transport http tradingview …», así Claude Code usa la sesión que se inició con /mcp.
+    /// </summary>
+    internal static string WriteMcpConfig(bool lab, bool tradingView)
     {
         // TRADINGHUB_MCP_COMMAND: otro ejecutable de Trading Hub (para pruebas); si no, este mismo
         var exe = Environment.GetEnvironmentVariable("TRADINGHUB_MCP_COMMAND") is { Length: > 0 } custom ? custom : Environment.ProcessPath ?? "TradingHub";
         var env = new Dictionary<string, string>();
         if (Environment.GetEnvironmentVariable("DOTNET_ROOT") is { Length: > 0 } root) env["DOTNET_ROOT"] = root;
-        var config = new Dictionary<string, object>
-        {
-            ["mcpServers"] = new Dictionary<string, object>
-            {
-                ["tradinghub"] = new Dictionary<string, object> { ["type"] = "stdio", ["command"] = exe, ["args"] = new[] { "--mcp" }, ["env"] = env },
-            },
-        };
+        var servers = new Dictionary<string, object>();
+        if (lab) servers["tradinghub"] = new Dictionary<string, object> { ["type"] = "stdio", ["command"] = exe, ["args"] = new[] { "--mcp" }, ["env"] = env };
+        if (tradingView) servers["tradingview"] = new Dictionary<string, object> { ["type"] = "http", ["url"] = TradingViewMcpUrl };
+        var config = new Dictionary<string, object> { ["mcpServers"] = servers };
         Directory.CreateDirectory(AppPaths.Root);
-        var path = Path.Combine(AppPaths.Root, "claude-lab-mcp.json");
+        var path = Path.Combine(AppPaths.Root, lab && !tradingView ? "claude-lab-mcp.json" : $"claude-mcp-{(lab ? "lab-" : "")}{(tradingView ? "tv" : "none")}.json");
         File.WriteAllText(path, JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true }));
         return path;
     }
@@ -518,13 +527,17 @@ public sealed class ClaudeCodeBridge : IAiBridge
             psi.ArgumentList.Add(dir);
         }
 
-        if (lab)
+        if (lab || UseTradingView)
         {
-            // laboratorio: Trading Hub como servidor MCP (backtest, optimización, walk-forward, reportes)
+            // laboratorio: Trading Hub como servidor MCP (backtest, optimización, walk-forward, reportes);
+            // TradingView: velas, cotizaciones, screener, noticias y calendario de la cuenta del usuario
             psi.ArgumentList.Add("--mcp-config");
-            psi.ArgumentList.Add(WriteLabConfig());
+            psi.ArgumentList.Add(WriteMcpConfig(lab, UseTradingView));
             psi.ArgumentList.Add("--allowedTools");
-            psi.ArgumentList.Add(string.Join(",", LabTools.Select(t => "mcp__tradinghub__" + t)));
+            var allowed = new List<string>();
+            if (lab) allowed.AddRange(LabTools.Select(t => "mcp__tradinghub__" + t));
+            if (UseTradingView) allowed.Add("mcp__tradingview");
+            psi.ArgumentList.Add(string.Join(",", allowed));
             // una optimización o un walk-forward pueden tardar varios minutos
             psi.Environment["MCP_TOOL_TIMEOUT"] = "3600000";
             psi.Environment["MCP_TIMEOUT"] = "60000";
@@ -672,6 +685,19 @@ public sealed class ClaudeCodeBridge : IAiBridge
     }
 
     private static void Post(Action a) => Dispatcher.UIThread.Post(a);
+
+    /// <summary>Instrucciones cuando el chat tiene TradingView (Claude Code o Codex).</summary>
+    public const string TradingViewSystemPrompt = """
+
+        TRADINGVIEW: tenés el servidor MCP oficial de TradingView («tradingview», con la cuenta del usuario): velas OHLCV
+        (get_ohlcv, de 1 minuto a mensual, hasta 5000 por pedido), cotizaciones, screener, técnicos, noticias, calendario
+        económico, fundamentales y alertas. Los símbolos van como BOLSA:TICKER (futuros continuos: CME_MINI:MNQ1!,
+        CME_MINI:MES1!, CME_MINI:M2K1!, CME_MINI:NQ1!, CME_MINI:ES1!). Usalo para investigar (contexto de mercado, noticias,
+        eventos, comparar con otros mercados o validar un patrón en más historia); los backtests se corren con los datos de
+        Trading Hub. Hay un límite de ~100 llamadas por minuto: pedí lo justo. No crees, cambies ni borres alertas ni listas
+        de TradingView salvo que el usuario lo pida explícitamente. Si las herramientas de TradingView no aparecen o fallan
+        por autorización, decile que la conecte en el menú del asistente (botón «Conectar TradingView»).
+        """;
 
     /// <summary>Método de trabajo del laboratorio (se suma a las instrucciones de estrategias).</summary>
     public const string LabSystemPrompt = """
