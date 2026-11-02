@@ -33,6 +33,10 @@ public sealed class InstrumentPicker : Button
     private readonly StackPanel _chips = new() { Orientation = Orientation.Horizontal, Spacing = 4 };
     private readonly ListBox _list = new() { Height = 430 };
     private readonly TextBlock _hint = new() { Classes = { "faint", "small" } };
+
+    /// <summary>Lo buscado no está en esta conexión: en cuáles sí (para pasar con un clic).</summary>
+    private readonly WrapPanel _elsewhere = new() { ItemSpacing = 6, LineSpacing = 6, IsVisible = false, Margin = new Thickness(12, 4) };
+    private int _elsewhereVersion;
     private readonly Flyout _flyout;
 
     private static readonly Dictionary<string, IReadOnlyList<Instrument>> InstrumentCache = new();
@@ -92,8 +96,8 @@ public sealed class InstrumentPicker : Button
             header.Children.Add(t);
         }
 
-        H("SÍMBOLO", 1);
-        H("DESCRIPCIÓN", 2);
+        H(L.T("SÍMBOLO"), 1);
+        H(L.T("DESCRIPCIÓN"), 2);
         H(L.T("PRECIO"), 3, HorizontalAlignment.Right);
         H(L.T("24 H"), 4, HorizontalAlignment.Right);
         H(L.T("VOLUMEN"), 5, HorizontalAlignment.Right);
@@ -110,6 +114,7 @@ public sealed class InstrumentPicker : Button
                 _chips,
                 new Border { Height = 1, Background = Ui.Line },
                 header,
+                _elsewhere,
                 _list,
                 _hint,
             },
@@ -282,7 +287,63 @@ public sealed class InstrumentPicker : Button
             filtered = filtered.OrderByDescending(r => r.Instrument.Symbol.StartsWith(q, StringComparison.OrdinalIgnoreCase)).ThenByDescending(r => r.Stats?.QuoteVolume ?? 0).ToList();
         _list.ItemsSource = filtered;
         _list.SelectedIndex = filtered.Count > 0 ? 0 : -1;
+        int version = ++_elsewhereVersion;
+        _elsewhere.IsVisible = false;
+        if (filtered.Count == 0 && q.Length > 0 && !_favoritesOnly) _ = FindElsewhereAsync(q, version);
         _hint.Text = L.F("{0} instrumentos · Enter abre aquí · {1} en una pestaña nueva · ★ marca favoritos",filtered.Count,Keys.Label(L.T("Enter")));
+    }
+
+    /// <summary>Busca lo escrito en las otras conexiones (NQ no está en Binance: está en IB, Rithmic o Tradovate).</summary>
+    private async Task FindElsewhereAsync(string q, int version)
+    {
+        var found = new List<(ConnectionProfile Profile, string Symbols)>();
+        foreach (var p in _svc.Connections.Enabled.Where(p => p.HasMarketData && p.Id != _profileId))
+        {
+            try
+            {
+                if (!InstrumentCache.TryGetValue(p.Id, out var instruments))
+                {
+                    var load = _svc.Connections.GetFeed(p.Id).GetInstrumentsAsync(CancellationToken.None);
+                    if (await Task.WhenAny(load, Task.Delay(3000)) != load) continue;
+                    instruments = await load;
+                    InstrumentCache[p.Id] = instruments;
+                }
+
+                var hits = instruments.Where(i => i.Symbol.Contains(q, StringComparison.OrdinalIgnoreCase) || i.Description.Contains(q, StringComparison.OrdinalIgnoreCase))
+                    .OrderByDescending(i => i.Symbol.StartsWith(q, StringComparison.OrdinalIgnoreCase)).ThenBy(i => i.Symbol.Length).Take(3).Select(i => i.Symbol).ToList();
+                if (hits.Count > 0) found.Add((p, string.Join(", ", hits)));
+            }
+            catch (Exception)
+            {
+                // esa conexión no está disponible ahora
+            }
+
+            if (version != _elsewhereVersion) return;
+        }
+
+        if (version != _elsewhereVersion) return;
+        _elsewhere.Children.Clear();
+        var current = _svc.Connections.Find(_profileId)?.Name ?? _profileId;
+        _elsewhere.Children.Add(new TextBlock
+        {
+            Text = found.Count > 0 ? L.F("«{0}» no está en {1}. Está en:", q, current) : L.F("«{0}» no está en {1} ni en las otras conexiones activas.", q, current),
+            Classes = { "small" },
+            Foreground = Ui.Text2,
+            VerticalAlignment = VerticalAlignment.Center,
+        });
+        foreach (var (profile, symbols) in found)
+        {
+            var id = profile.Id;
+            var b = new Button { Content = $"{profile.Name} · {symbols}", Padding = new Thickness(10, 4) };
+            b.Click += async (_, _) =>
+            {
+                _filterQuote = "";
+                await LoadAsync(id);
+            };
+            _elsewhere.Children.Add(b);
+        }
+
+        _elsewhere.IsVisible = true;
     }
 
     private Control BuildRow(Row r)
